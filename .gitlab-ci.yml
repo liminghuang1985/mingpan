@@ -1,0 +1,32 @@
+stages:
+  - build
+
+variables:
+  ANDROID_SDK_VERSION: "11076708"
+  ANDROID_BUILD_TOOLS_VERSION: "34.0.0"
+
+flutter-build:
+  stage: build
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl git unzip openjdk17-jre openjdk17-dev bash python3 nodejs npm
+    - curl -fsSL https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.41.6-stable.tar.xz | tar xJ -C /opt
+    - export PATH="/opt/flutter/bin:$PATH"
+    - export ANDROID_HOME="/opt/android-sdk"
+    - mkdir -p $ANDROID_HOME/cmdline-tools
+    - cd /tmp && curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_VERSION}_latest.zip -o cmdline-tools.zip
+    - unzip -q cmdline-tools.zip && mv cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+    - rm cmdline-tools.zip
+    - yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+    - $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;${ANDROID_BUILD_TOOLS_VERSION}" "platform-tools"
+    - export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
+    - flutter config --no-analytics
+    - flutter doctor --android-licenses 2>/dev/null || true
+  script:
+    - flutter pub get
+    - flutter build apk --debug
+    - flutter build apk --release
+  artifacts:
+    paths:
+      - build/app/outputs/flutter-apk/
+    expire_in: 1 week
