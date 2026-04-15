@@ -14,11 +14,8 @@ class MingPanApp extends StatelessWidget {
     return MaterialApp(
       title: '命盘',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const HomePage(),
+      theme: ThemeData.dark(useMaterial3: true),
+      home: const MainScaffold(),
     );
   }
 }

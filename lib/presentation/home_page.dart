@@ -9,7 +9,6 @@ import 'package:intl/intl.dart';
 import '../core/bazi.dart';
 import '../core/dayun.dart';
 import '../core/wuxing.dart' as wx;
-import '../core/responsive.dart';
 import '../models/bazi.dart';
 import 'detail_page.dart';
 import 'mingpan_animated_canvas.dart';
@@ -17,91 +16,57 @@ import 'widgets/scroll_picker.dart';
 
 // ==================== State Providers ====================
 
-/// 出生日期
-final birthDateProvider = StateProvider<DateTime>((ref) {
-  return DateTime(2000, 1, 1);
-});
-
-/// 出生小时（0-23）
+final birthDateProvider = StateProvider<DateTime>((ref) => DateTime(2000, 1, 1));
 final birthHourProvider = StateProvider<int>((ref) => 12);
-
-/// 出生分钟（0-59）
 final birthMinuteProvider = StateProvider<int>((ref) => 0);
-
-/// 性别
 final genderProvider = StateProvider<String>((ref) => '男');
-
-/// 计算结果（null 表示未计算）
 final baziResultProvider = StateProvider<Bazi?>((ref) => null);
-
-/// 大运结果
 final dayunResultProvider = StateProvider<DayunResult?>((ref) => null);
-
-/// 排盘计算中状态
 final isCalculatingProvider = StateProvider<bool>((ref) => false);
-
-/// 命盘动画开关（默认开启）
 final animationEnabledProvider = StateProvider<bool>((ref) => true);
+final currentTabProvider = StateProvider<int>((ref) => 0);
 
-// ==================== Home Page ====================
+// ==================== 主入口：底部导航 Scaffold ====================
 
-/// 命盘首页
-class HomePage extends ConsumerStatefulWidget {
-  const HomePage({super.key});
+class MainScaffold extends ConsumerWidget {
+  const MainScaffold({super.key});
 
   @override
-  ConsumerState<HomePage> createState() => _HomePageState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tab = ref.watch(currentTabProvider);
+    return Scaffold(
+      body: IndexedStack(
+        index: tab,
+        children: const [
+          _HomeTab(),
+          _MingPanTab(),
+          DetailPageBody(),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: tab,
+        onDestinationSelected: (i) => ref.read(currentTabProvider.notifier).state = i,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: '首页'),
+          NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: '命盘'),
+          NavigationDestination(icon: Icon(Icons.info_outline), selectedIcon: Icon(Icons.info), label: '详情'),
+        ],
+      ),
+    );
+  }
 }
 
-class _HomePageState extends ConsumerState<HomePage> {
-  // Spacing system: _gap=8, _gapMd=16, _gapLg=24, _gapXl=32
-  static const _gap = 8.0;
-  static const _gapMd = 16.0;
-  static const _gapLg = 24.0;
-  static const _gapXl = 32.0;
+// ==================== 第一页：首页（输入） ====================
 
+class _HomeTab extends ConsumerStatefulWidget {
+  const _HomeTab();
+
+  @override
+  ConsumerState<_HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends ConsumerState<_HomeTab> {
   final GlobalKey _repaintKey = GlobalKey();
-
-  Future<void> _shareMingPan() async {
-    // Web HTML renderer 不支持 RenderRepaintBoundary.toImage()
-    if (kIsWeb) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Web 端请使用浏览器截图功能（如 Ctrl+Shift+S）')),
-      );
-      return;
-    }
-    try {
-      final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) return;
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) return;
-      final bytes = byteData.buffer.asUint8List();
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('命盘截图已生成 (${bytes.length ~/ 1024}KB)，可保存或分享'),
-          backgroundColor: Colors.green.shade600,
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: '确定',
-            textColor: Colors.white,
-            onPressed: () {},
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('截图失败：$e'),
-          backgroundColor: Colors.red.shade600,
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,167 +76,221 @@ class _HomePageState extends ConsumerState<HomePage> {
     final gender = ref.watch(genderProvider);
     final baziResult = ref.watch(baziResultProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('命盘排盘'),
-        centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 日期时间选择
-            _buildDateSelector(context, ref, birthDate),
-            const SizedBox(height: _gapMd),
-
-            // 性别选择
-            _buildGenderSelector(context, ref, gender),
-            const SizedBox(height: _gapLg),
-
-            // 计算按钮
-            FilledButton.icon(
-              onPressed: () => _calculate(context, ref, birthDate, birthHour, birthMinute, gender),
-              icon: const Icon(Icons.calculate),
-              label: const Text('排盘'),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 背景图
+        Image.asset(
+          'assets/images/home_bg.jpg',
+          fit: BoxFit.cover,
+        ),
+        // 半透明遮罩，让文字和按钮更清晰
+        Container(color: Colors.black.withValues(alpha: 0.3)),
+        // 内容
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
+              children: [
+                const Spacer(),
+                // 日期时间选择区
+                _buildInputCard(context, ref, birthDate, birthHour, birthMinute, gender),
+                const SizedBox(height: 20),
+                // 排盘按钮
+                _buildPaiPanButton(context, ref, birthDate, birthHour, birthMinute, gender, baziResult),
+                const SizedBox(height: 40),
+              ],
             ),
-            const SizedBox(height: _gapLg),
+          ),
+        ),
+      ],
+    );
+  }
 
-            // 结果展示
-            if (ref.watch(isCalculatingProvider)) ...[
-              const SizedBox(height: _gapLg),
-              const Center(child: CircularProgressIndicator()),
-            ] else if (baziResult != null) ...[
-              _buildResultCard(context, ref, baziResult),
-              const SizedBox(height: _gapLg),
-              _buildMingPanCanvas(context, ref, baziResult),
-              const SizedBox(height: _gapLg),
-              // 截图分享按钮
-              OutlinedButton.icon(
-                onPressed: _shareMingPan,
-                icon: const Icon(Icons.share),
-                label: const Text('截图分享'),
-              ),
-              const SizedBox(height: _gap),
-              // 详情按钮
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => DetailPage(
-                        bazi: baziResult,
-                        dayunResult: ref.watch(dayunResultProvider),
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.info_outline),
-                label: const Text('查看详情'),
-              ),
-            ] else ...[
-              const SizedBox(height: _gapXl * 1.5),
-              _buildEmptyState(context),
-            ],
+  Widget _buildInputCard(BuildContext context, WidgetRef ref, DateTime birthDate, int hour, int minute, String gender) {
+    final hourStr = hour.toString().padLeft(2, '0');
+    final minStr = minute.toString().padLeft(2, '0');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            spreadRadius: 0,
+            offset: Offset.zero,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                // 标题
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.auto_awesome, color: Colors.amber.shade300, size: 22),
+                    const SizedBox(width: 8),
+                    Text('命盘排盘', style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      shadows: [Shadow(color: Colors.black45, blurRadius: 4)],
+                    )),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // 日期 + 时间 左右分栏
+                Row(
+                  children: [
+                    Expanded(child: _buildDateTile(ref, birthDate)),
+                    Container(width: 1, height: 50, color: Colors.white.withValues(alpha: 0.2), margin: const EdgeInsets.symmetric(horizontal: 12)),
+                    Expanded(child: _buildTimeTile(ref, hour, minStr)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // 性别选择
+                _buildGenderRow(ref, gender),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateTile(WidgetRef ref, DateTime date) {
+    return InkWell(
+      onTap: () => _showDatePicker(ref, date),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          children: [
+            Icon(Icons.calendar_today, color: Colors.amber.shade300, size: 20),
+            const SizedBox(height: 6),
+            Text('出生日期', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            const SizedBox(height: 4),
+            Text(DateFormat('yyyy年MM月dd日').format(date),
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
+  Widget _buildTimeTile(WidgetRef ref, int hour, String minute) {
+    return InkWell(
+      onTap: () => _showDatePicker(ref, ref.read(birthDateProvider)),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          children: [
+            Icon(Icons.access_time, color: Colors.amber.shade300, size: 20),
+            const SizedBox(height: 6),
+            Text('出生时间', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            const SizedBox(height: 4),
+            Text('${hour.toString().padLeft(2, '0')}:$minute',
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenderRow(WidgetRef ref, String gender) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildGenderChip(ref, '男', Icons.male, gender == '男'),
+        const SizedBox(width: 16),
+        _buildGenderChip(ref, '女', Icons.female, gender == '女'),
+      ],
+    );
+  }
+
+  Widget _buildGenderChip(WidgetRef ref, String label, IconData icon, bool selected) {
+    return GestureDetector(
+      onTap: () => ref.read(genderProvider.notifier).state = label,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: _gapMd),
-        padding: const EdgeInsets.all(_gapXl * 1.5),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? Colors.amber.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(
+            color: selected ? Colors.amber : Colors.white.withValues(alpha: 0.3),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: selected ? Colors.amber : Colors.white70, size: 18),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(
+              color: selected ? Colors.amber : Colors.white70,
+              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaiPanButton(BuildContext context, WidgetRef ref, DateTime birthDate, int hour, int minute, String gender, Bazi? baziResult) {
+    return GestureDetector(
+      onTap: () => _calculateAndNavigate(context, ref, birthDate, hour, minute, gender),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
+            colors: [Colors.amber.shade600, Colors.amber.shade400],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Colors.amber.shade50,
-              Colors.amber.shade100,
-            ],
           ),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: Colors.amber.shade200,
-            width: 1.5,
-          ),
+          borderRadius: BorderRadius.circular(30),
           boxShadow: [
-            BoxShadow(
-              color: Colors.amber.withValues(alpha: 0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
+            BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4)),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.amber.shade100,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.amber.shade300,
-                  width: 2,
-                ),
-              ),
-              child: Icon(
-                Icons.auto_awesome,
-                size: 40,
-                color: Colors.amber.shade700,
-              ),
-            ),
-            const SizedBox(height: _gapLg),
-            Text(
-              '选择日期，点击排盘',
-              style: TextStyle(
-                color: Colors.amber.shade900,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: _gap),
-            Text(
-              '八字命盘将显示在此处',
-              style: TextStyle(
-                color: Colors.amber.shade700,
-                fontSize: 14,
-              ),
-            ),
+            Icon(Icons.bolt, color: Colors.white, size: 22),
+            SizedBox(width: 8),
+            Text('排  盘', style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 4,
+            )),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDateSelector(BuildContext context, WidgetRef ref, DateTime date) {
-    final hour = ref.watch(birthHourProvider);
-    final minute = ref.watch(birthMinuteProvider);
-    final currentDateTime = DateTime(date.year, date.month, date.day, hour, minute);
-    
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.calendar_today),
-        title: const Text('出生日期时间'),
-        subtitle: Text(
-          '${DateFormat('yyyy年MM月dd日').format(date)} ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}',
-        ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () {
-          _showScrollPickerDialog(context, ref, currentDateTime);
-        },
-      ),
+  void _showDatePicker(WidgetRef ref, DateTime initial) {
+    final now = DateTime.now();
+    final currentDateTime = DateTime(
+      ref.read(birthDateProvider).year,
+      ref.read(birthDateProvider).month,
+      ref.read(birthDateProvider).day,
+      ref.read(birthHourProvider),
+      ref.read(birthMinuteProvider),
     );
-  }
-  
-  void _showScrollPickerDialog(BuildContext context, WidgetRef ref, DateTime initialDateTime) {
-    DateTime selectedDateTime = initialDateTime;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -279,393 +298,205 @@ class _HomePageState extends ConsumerState<HomePage> {
       builder: (ctx) => Container(
         height: MediaQuery.of(ctx).size.height * 0.7,
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: Color(0xDD1a1a2e),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
-            // 顶部栏
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('取消'),
-                  ),
-                  const Text(
-                    '选择出生日期时间',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, selectedDateTime),
-                    child: const Text('确定', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消', style: TextStyle(color: Colors.white70))),
+                  const Text('选择出生日期时间', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  TextButton(onPressed: () => Navigator.pop(ctx, currentDateTime), child: const Text('确定', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold))),
                 ],
               ),
             ),
-            const Divider(height: 1),
-            // 滚动选择器
+            const Divider(color: Colors.white24, height: 1),
             Expanded(
               child: DateTimeScrollPicker(
-                initialDate: initialDateTime,
+                initialDate: currentDateTime,
                 firstDate: DateTime(1900),
-                lastDate: DateTime.now(),
-                onDateTimeChanged: (DateTime newDateTime) {
-                  selectedDateTime = newDateTime;
+                lastDate: now,
+                onDateTimeChanged: (dt) {
+                  ref.read(birthDateProvider.notifier).state = dt;
+                  ref.read(birthHourProvider.notifier).state = dt.hour;
+                  ref.read(birthMinuteProvider.notifier).state = dt.minute;
                 },
               ),
             ),
           ],
         ),
       ),
-    ).then((result) {
-      if (result != null && result is DateTime) {
-        ref.read(birthDateProvider.notifier).state = result;
-        ref.read(birthHourProvider.notifier).state = result.hour;
-        ref.read(birthMinuteProvider.notifier).state = result.minute;
-      }
-    });
-  }
-
-  // 已合并到日期选择器中
-
-  Widget _buildGenderSelector(BuildContext context, WidgetRef ref, String gender) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.person),
-                SizedBox(width: _gap),
-                Text('性别', style: TextStyle(fontSize: 16)),
-              ],
-            ),
-            const SizedBox(height: _gapMd),
-            Row(
-              children: [
-                Expanded(
-                  child: ChoiceChip(
-                    label: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.male, size: 18),
-                        SizedBox(width: _gap),
-                        Text('男'),
-                      ],
-                    ),
-                    selected: gender == '男',
-                    onSelected: (_) => ref.read(genderProvider.notifier).state = '男',
-                  ),
-                ),
-                const SizedBox(width: _gapMd),
-                Expanded(
-                  child: ChoiceChip(
-                    label: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.female, size: 18),
-                        SizedBox(width: _gap),
-                        Text('女'),
-                      ],
-                    ),
-                    selected: gender == '女',
-                    onSelected: (_) => ref.read(genderProvider.notifier).state = '女',
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildResultCard(BuildContext context, WidgetRef ref, Bazi bazi) {
-    final dayunResult = ref.watch(dayunResultProvider);
-    final analysis = wx.analyzeBazi(bazi, gender: bazi.gender);
-    final strength = analysis.strength;
-    final wuxingScore = analysis.wuxingScore;
+  Future<void> _calculateAndNavigate(BuildContext context, WidgetRef ref, DateTime birthDate, int hour, int minute, String gender) async {
+    ref.read(isCalculatingProvider.notifier).state = true;
 
-    // 日主强弱徽章
-    String strengthBadge;
-    String strengthEmoji;
-    Color strengthColor;
-    switch (strength.level) {
-      case wx.StrengthLevel.pianQiang:
-      case wx.StrengthLevel.qiang:
-        strengthBadge = '强';
-        strengthEmoji = '💪';
-        strengthColor = Colors.red;
-      case wx.StrengthLevel.zhongHe:
-        strengthBadge = '中和';
-        strengthEmoji = '⚖️';
-        strengthColor = Colors.amber;
-      case wx.StrengthLevel.ruo:
-      case wx.StrengthLevel.pianRuo:
-        strengthBadge = '弱';
-        strengthEmoji = '🧍';
-        strengthColor = Colors.blue;
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final bazi = Bazi.fromResult(calculateBazi(birthDate.year, birthDate.month, birthDate.day, hour, minute), birthDate, gender);
+    final dayunResult = calculateDayun(bazi, birthDate);
+
+    ref.read(baziResultProvider.notifier).state = bazi;
+    ref.read(dayunResultProvider.notifier).state = dayunResult;
+    ref.read(isCalculatingProvider.notifier).state = false;
+
+    // 跳到命盘页
+    ref.read(currentTabProvider.notifier).state = 1;
+  }
+}
+
+// ==================== 第二页：命盘展示 ====================
+
+class _MingPanTab extends ConsumerWidget {
+  const _MingPanTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bazi = ref.watch(baziResultProvider);
+    final dayunResult = ref.watch(dayunResultProvider);
+
+    if (bazi == null) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.auto_awesome_outlined, size: 64, color: Colors.white30),
+            SizedBox(height: 16),
+            Text('暂无命盘数据', style: TextStyle(color: Colors.white54, fontSize: 16)),
+            SizedBox(height: 8),
+            Text('请先在首页进行排盘', style: TextStyle(color: Colors.white38, fontSize: 14)),
+          ],
+        ),
+      );
     }
 
-    // 五行旺度
-    final total = wuxingScore.total == 0 ? 1 : wuxingScore.total;
-    final wuxingBars = [
-      ('木', wuxingScore.mu, Colors.green, '🟢'),
-      ('火', wuxingScore.huo, Colors.red, '🔴'),
-      ('土', wuxingScore.tu, Colors.brown, '🟤'),
-      ('金', wuxingScore.jin, Colors.blueGrey, '⬜'),
-      ('水', wuxingScore.shui, Colors.cyan, '🔵'),
-    ];
+    final analysis = wx.analyzeBazi(bazi, gender: bazi.gender);
 
-    return Card(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f3460)],
+        ),
+      ),
+      child: SafeArea(
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  '八字排盘结果',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // 八字结果头部
+            _buildBaziHeader(bazi, analysis),
+            const Divider(color: Colors.white12),
+            // 命盘动画
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: MingPanAnimatedCanvas(
+                  bazi: bazi,
+                  autoPlay: true,
+                  dayunResult: dayunResult,
+                  isDark: true,
                 ),
-                const SizedBox(width: _gapMd),
-                // 日主强弱徽章
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: strengthColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: strengthColor.withValues(alpha: 0.5)),
-                  ),
-                  child: Text(
-                    '$strengthEmoji $strengthBadge',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: strengthColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: _gap),
-                // 五行徽章
-                Text(
-                  '日主${wx.GAN_WUXING_WUXING[bazi.dayGan]}行',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                ),
-              ],
-            ),
-            const SizedBox(height: _gapMd),
-            // 五行旺度条
-            Row(
-              children: wuxingBars.map((wb) {
-                final pct = (wb.$2 / total).clamp(0.0, 1.0);
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: Column(
-                      children: [
-                        Text(wb.$4, style: const TextStyle(fontSize: 10)),
-                        const SizedBox(height: _gap),
-                        Container(
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: FractionallySizedBox(
-                            alignment: Alignment.bottomCenter,
-                            heightFactor: pct,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: wb.$3,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: _gap),
-                        Text('${(pct * 100).toInt()}%', style: const TextStyle(fontSize: 9)),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: _gapMd),
-            _buildGanzhiRow('年柱', bazi.yearGanZhi),
-            _buildGanzhiRow('月柱', bazi.monthGanZhi),
-            _buildGanzhiRow('日柱', bazi.dayGanZhi),
-            _buildGanzhiRow('时柱', bazi.hourGanZhi),
-            if (dayunResult != null) ...[
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '大运：${dayunResult.direction.nameCn}',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  const SizedBox(width: _gapMd),
-                  Text(
-                    '起运：${dayunResult.qiyun.sui}岁${dayunResult.qiyun.yue}月',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
               ),
-            ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildGanzhiRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 60,
-            child: Text(label, style: const TextStyle(fontSize: 14)),
-          ),
-          const SizedBox(width: _gap),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildBaziHeader(Bazi bazi, wx.BaziAnalysis analysis) {
+    final strength = analysis.strength;
+    Color strengthColor;
+    String strengthLabel;
+    if (strength.level == wx.StrengthLevel.qiang || strength.level == wx.StrengthLevel.pianQiang) {
+      strengthColor = Colors.redAccent; strengthLabel = '强';
+    } else if (strength.level == wx.StrengthLevel.zhongHe) {
+      strengthColor = Colors.amber; strengthLabel = '中和';
+    } else {
+      strengthColor = Colors.cyanAccent; strengthLabel = '弱';
+    }
 
-  Widget _buildMingPanCanvas(BuildContext context, WidgetRef ref, Bazi bazi) {
-    final animationEnabled = ref.watch(animationEnabledProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    // 使用响应式尺寸
-    final size = Responsive.getMingPanSize(context);
-
-    return Center(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         children: [
-          // 动画开关
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Text(
-                animationEnabled ? '动画旋转中' : '动画已关闭',
-                style: TextStyle(
-                  fontSize: Responsive.fontSize(context, 11),
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              SizedBox(width: Responsive.spacing(context, _gap)),
-              IconButton(
-                icon: Icon(
-                  animationEnabled ? Icons.pause_circle : Icons.play_circle,
-                  color: animationEnabled ? Colors.amber.shade700 : Colors.grey,
-                ),
-                iconSize: Responsive.value(context, mobile: 28, tablet: 32, desktop: 36),
-                onPressed: () {
-                  ref.read(animationEnabledProvider.notifier).state = !animationEnabled;
-                },
-                tooltip: animationEnabled ? '关闭动画' : '开启动画',
-              ),
+              _buildGanZhiPill('年', bazi.yearGanZhi, Colors.indigoAccent),
+              _buildGanZhiPill('月', bazi.monthGanZhi, Colors.tealAccent),
+              _buildGanZhiPill('日', bazi.dayGanZhi, Colors.deepOrangeAccent),
+              _buildGanZhiPill('时', bazi.hourGanZhi, Colors.purpleAccent),
             ],
           ),
-          RepaintBoundary(
-            key: _repaintKey,
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFFF8E1),
-                borderRadius: BorderRadius.circular(Responsive.value(context, mobile: 16, tablet: 20, desktop: 24)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(Responsive.spacing(context, _gap)),
-                child: SizedBox(
-                  width: size,
-                  height: size,
-                  child: MingPanAnimatedCanvas(
-                    bazi: bazi,
-                    autoPlay: animationEnabled,
-                    dayunResult: ref.watch(dayunResultProvider),
-                    isDark: isDark,
-                  ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: strengthColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: strengthColor.withValues(alpha: 0.5)),
                 ),
+                child: Text('日主${bazi.dayGan} · ${wx.GAN_WUXING_WUXING[bazi.dayGan]}行  $strengthLabel',
+                  style: TextStyle(color: strengthColor, fontSize: 13, fontWeight: FontWeight.w600)),
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  void _calculate(
-    BuildContext context,
-    WidgetRef ref,
-    DateTime birthDate,
-    int hour,
-    int minute,
-    String gender,
-  ) {
-    // 日期校验：1900-2100年范围
-    if (birthDate.year < 1900 || birthDate.year > 2100) {
-      _showError(context, '日期范围仅支持1900-2100年');
-      return;
-    }
-
-    // 时间校验
-    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-      _showError(context, '请输入有效的出生时间');
-      return;
-    }
-
-    ref.read(isCalculatingProvider.notifier).state = true;
-    try {
-      // 计算八字
-      final result = calculateBazi(
-        birthDate.year,
-        birthDate.month,
-        birthDate.day,
-        hour,
-        minute,
-      );
-
-      final bazi = Bazi.fromResult(result, birthDate, gender);
-      ref.read(baziResultProvider.notifier).state = bazi;
-
-      // 计算大运
-      final dayun = calculateDayun(bazi, birthDate);
-      ref.read(dayunResultProvider.notifier).state = dayun;
-    } catch (e) {
-      _showError(context, '计算出错：${e.toString()}');
-    } finally {
-      ref.read(isCalculatingProvider.notifier).state = false;
-    }
-  }
-
-  void _showError(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red.shade600,
-        duration: const Duration(seconds: 3),
-      ),
+  Widget _buildGanZhiPill(String label, String gz, Color color) {
+    return Column(
+      children: [
+        Text(label, style: TextStyle(color: Colors.white54, fontSize: 11)),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.4)),
+          ),
+          child: Text(gz, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.bold)),
+        ),
+      ],
     );
+  }
+}
+
+// ==================== 详情页（第三页）====================
+
+class DetailPageBody extends ConsumerWidget {
+  const DetailPageBody({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bazi = ref.watch(baziResultProvider);
+    final dayunResult = ref.watch(dayunResultProvider);
+
+    if (bazi == null) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.info_outline, size: 64, color: Colors.white30),
+            SizedBox(height: 16),
+            Text('暂无命盘数据', style: TextStyle(color: Colors.white54, fontSize: 16)),
+          ],
+        ),
+      );
+    }
+
+    return DetailPage(bazi: bazi, dayunResult: dayunResult);
   }
 }

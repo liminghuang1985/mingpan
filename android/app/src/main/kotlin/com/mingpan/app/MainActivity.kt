@@ -1,4 +1,4 @@
-package com.example.mingpan_app
+package com.mingpan.app
 
 import io.flutter.embedding.android.FlutterActivity
 
