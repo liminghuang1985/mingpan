@@ -660,37 +660,24 @@ class _MingPanAnimatedPainter extends CustomPainter {
   }
 
   void _drawCenter(Canvas canvas, Offset center, double radius) {
-    // 1. 绘制白色指南针底盘
+    // ========== 视觉层次重构 ==========
+    // 层次1（背景）：渐变底盘，半透明，不抢焦点
+    // 层次2（边界）：金属边框，作为视觉锚点
+    // 层次3（辅助）：十字线，减细淡化
+    // 层次4（焦点）：八卦符号 + 日干文字，最清晰
+
+    // --- 层次1：渐变底盘（背景层，不抢焦点）---
     final compassBg = Paint()
       ..shader = RadialGradient(
-        colors: [Colors.white, Colors.grey.shade200],
-        stops: const [0.6, 1.0],
+        colors: [
+          (isDark ? Colors.grey.shade800 : Colors.grey.shade100),
+          (isDark ? Colors.grey.shade900 : Colors.grey.shade300),
+        ],
+        stops: const [0.4, 1.0],
       ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius, compassBg);
-    
-    // 2. 绘制红色十字线（罗盘刻度）
-    final crossPaint = Paint()
-      ..color = Colors.red.shade600
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round;
-    
-    // 垂直线
-    canvas.drawLine(
-      Offset(center.dx, center.dy - radius * 0.8),
-      Offset(center.dx, center.dy + radius * 0.8),
-      crossPaint,
-    );
-    // 水平线
-    canvas.drawLine(
-      Offset(center.dx - radius * 0.8, center.dy),
-      Offset(center.dx + radius * 0.8, center.dy),
-      crossPaint,
-    );
-    
-    // 3. 绘制八卦符号环
-    _drawBaguaSymbols(canvas, center, radius * 0.72);
-    
-    // 4. 金属边框
+
+    // --- 层次2：金属边框（视觉锚点，先于内容绘制形成边界）---
     final border = Paint()
       ..shader = LinearGradient(
         colors: [
@@ -702,27 +689,57 @@ class _MingPanAnimatedPainter extends CustomPainter {
     border.style = PaintingStyle.stroke;
     border.strokeWidth = 4.0;
     canvas.drawCircle(center, radius, border);
-    
-    // 5. 中心日干文字
+
+    // --- 层次3：十字线（辅助层，细淡化）---
+    final crossPaint = Paint()
+      ..color = (isDark ? Colors.red.shade800 : Colors.red.shade300).withAlpha(140)
+      ..strokeWidth = 0.8
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(
+      Offset(center.dx, center.dy - radius * 0.75),
+      Offset(center.dx, center.dy + radius * 0.75),
+      crossPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx - radius * 0.75, center.dy),
+      Offset(center.dx + radius * 0.75, center.dy),
+      crossPaint,
+    );
+
+    // --- 层次4：八卦符号环（焦点层，在辅助线之后绘制）---
+    _drawBaguaSymbols(canvas, center, radius * 0.72);
+
+    // --- 层次5：日干文字（绝对焦点，最清晰）---
     final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center);
+
+    // 主日干文字，放大+加深对比
     tp.text = TextSpan(
       text: bazi.dayGan,
       style: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        color: isDark ? Colors.deepOrange.shade200 : Colors.deepOrange.shade800,
-        shadows: [Shadow(color: isDark ? Colors.black38 : Colors.white54, blurRadius: 4)],
+        fontSize: 30,
+        fontWeight: FontWeight.w900,
+        color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+        shadows: [
+          Shadow(color: isDark ? Colors.black54 : Colors.white38, blurRadius: 8),
+          Shadow(color: isDark ? Colors.black26 : Colors.white54, blurRadius: 2),
+        ],
       ),
     );
     tp.layout();
-    tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy - tp.height / 2 - 5));
+    tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy - tp.height / 2 - 6));
 
+    // 五行小字
     tp.text = TextSpan(
       text: _getWuxing(bazi.dayGan),
-      style: TextStyle(fontSize: 12, color: isDark ? Colors.brown.shade300 : Colors.brown.shade700),
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: isDark ? Colors.amber.shade400 : Colors.amber.shade800,
+      ),
     );
     tp.layout();
-    tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy + 5));
+    tp.paint(canvas, Offset(center.dx - tp.width / 2, center.dy + 8));
   }
 
   void _drawDiZhiRing(Canvas canvas, Offset center, double outerR, double innerR, double rotation) {
@@ -1308,36 +1325,42 @@ class _MingPanAnimatedPainter extends CustomPainter {
     // 八卦符号：乾☰ 坤☷ 震☳ 巽☴ 坎☵ 离☲ 艮☶ 兑☱
     final bagua = ['☰', '☱', '☲', '☳', '☴', '☵', '☶', '☷'];
     final baguaNames = ['乾', '兑', '离', '震', '巽', '坎', '艮', '坤'];
-    
+
     final textPainter = TextPainter(
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
     );
-    
+
     for (var i = 0; i < 8; i++) {
       final angle = (i * 45 - 90) * math.pi / 180;
-      
-      // 绘制八卦符号
+
+      // 八卦符号 - 使用深金色，与中心日干呼应
       textPainter.text = TextSpan(
         text: bagua[i],
-        style: const TextStyle(
-          fontSize: 16,
+        style: TextStyle(
+          fontSize: 17,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF000000),
+          color: isDark ? const Color(0xFFDAA520) : const Color(0xFF8B6914),
+          shadows: [
+            Shadow(
+              color: isDark ? Colors.black45 : Colors.white38,
+              blurRadius: 4,
+            ),
+          ],
         ),
       );
       textPainter.layout();
       final symbolX = center.dx + radius * math.cos(angle) - textPainter.width / 2;
       final symbolY = center.dy + radius * math.sin(angle) - textPainter.height / 2;
       textPainter.paint(canvas, Offset(symbolX, symbolY));
-      
-      // 绘制八卦名称
+
+      // 八卦名称 - 次级颜色，与符号拉开层次
       textPainter.text = TextSpan(
         text: baguaNames[i],
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF8B0000), // 深红色
+          color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
         ),
       );
       textPainter.layout();

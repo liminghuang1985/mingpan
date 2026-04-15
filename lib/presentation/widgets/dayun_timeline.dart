@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../core/dayun.dart';
 
@@ -86,7 +87,7 @@ class DayunTimeline extends StatelessWidget {
                   margin: const EdgeInsets.only(right: 12),
                   child: Column(
                     children: [
-                      // 大运干支
+                      // 大运干支 — 统一蓝色系，通过亮度区分状态
                       Container(
                         height: 60,
                         decoration: BoxDecoration(
@@ -94,18 +95,18 @@ class DayunTimeline extends StatelessWidget {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: isActive
-                                ? [Colors.blue.shade300, Colors.blue.shade500]
+                                ? [const Color(0xFF1565C0), const Color(0xFF0D47A1)]
                                 : isPast
-                                    ? [Colors.grey.shade300, Colors.grey.shade400]
-                                    : [Colors.orange.shade200, Colors.orange.shade300],
+                                    ? [const Color(0xFF90A4AE), const Color(0xFF607D8B)]
+                                    : [const Color(0xFF64B5F6), const Color(0xFF42A5F5)],
                           ),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: isActive
                               ? [
                                   BoxShadow(
-                                    color: Colors.blue.withOpacity(0.4),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                                    color: const Color(0xFF1565C0).withOpacity(0.5),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
                                   )
                                 ]
                               : null,
@@ -127,27 +128,30 @@ class DayunTimeline extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      
-                      // 年龄范围
+                      const SizedBox(height: 10),
+
+                      // 年龄范围 — 主信息，放大加粗
                       Text(
                         '${dayun.startAge}-${dayun.endAge}岁',
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                           color: isActive
-                              ? Colors.blue.shade700
-                              : Colors.grey.shade600,
+                              ? const Color(0xFF0D47A1)
+                              : isPast
+                                  ? const Color(0xFF607D8B)
+                                  : const Color(0xFF42A5F5),
                         ),
                       ),
                       const SizedBox(height: 2),
-                      
-                      // 年份范围
+
+                      // 年份范围 — 辅助信息，降级显示
                       Text(
                         '${dayun.startYear}-${dayun.startYear + 9}',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           color: Colors.grey.shade500,
+                          fontWeight: FontWeight.normal,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -162,27 +166,27 @@ class DayunTimeline extends StatelessWidget {
                           ),
                           child: FractionallySizedBox(
                             alignment: Alignment.centerLeft,
-                            widthFactor: ((currentAge - dayun.startAge) / 10).clamp(0.0, 1.0),
+                            widthFactor: (max(0, currentAge - dayun.startAge) / 10).clamp(0.0, 1.0),
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(2),
-                                color: Colors.blue.shade500,
+                                color: const Color(0xFF1565C0),
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${currentAge - dayun.startAge + 1}/10年',
-                          style: TextStyle(
+                          '${max(0, currentAge - dayun.startAge + 1)}/10年',
+                          style: const TextStyle(
                             fontSize: 9,
-                            color: Colors.blue.shade700,
+                            color: Color(0xFF0D47A1),
                           ),
                         ),
                       ] else if (isPast)
-                        Icon(Icons.check_circle, size: 16, color: Colors.grey.shade400)
+                        const Icon(Icons.check_circle, size: 16, color: Color(0xFF90A4AE))
                       else
-                        Icon(Icons.schedule, size: 16, color: Colors.orange.shade300),
+                        const Icon(Icons.schedule, size: 16, color: Color(0xFF64B5F6)),
                     ],
                   ),
                 ),

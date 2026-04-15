@@ -23,11 +23,13 @@ class ScrollPicker extends StatefulWidget {
 
 class _ScrollPickerState extends State<ScrollPicker> {
   late FixedExtentScrollController _controller;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _controller = FixedExtentScrollController(initialItem: widget.initialIndex);
+    _selectedIndex = widget.initialIndex;
   }
 
   @override
@@ -48,18 +50,33 @@ class _ScrollPickerState extends State<ScrollPicker> {
             itemExtent: widget.itemHeight,
             diameterRatio: 1.5,
             physics: const FixedExtentScrollPhysics(),
-            onSelectedItemChanged: widget.onSelectedItemChanged,
+            onSelectedItemChanged: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+              widget.onSelectedItemChanged(index);
+            },
             childDelegate: ListWheelChildBuilderDelegate(
               builder: (context, index) {
                 if (index < 0 || index >= widget.items.length) {
                   return null;
                 }
+                final isSelected = index == _selectedIndex;
                 return Center(
-                  child: Text(
-                    widget.items[index],
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
+                  child: Container(
+                    height: widget.itemHeight,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.blue : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      widget.items[index],
+                      style: TextStyle(
+                        fontSize: isSelected ? 24 : 20,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? Colors.white : Colors.grey.shade600,
+                      ),
                     ),
                   ),
                 );
@@ -73,10 +90,9 @@ class _ScrollPickerState extends State<ScrollPicker> {
               height: widget.itemHeight,
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: Colors.grey.shade300, width: 1),
-                  bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+                  top: BorderSide(color: Colors.blue.shade200, width: 1),
+                  bottom: BorderSide(color: Colors.blue.shade200, width: 1),
                 ),
-                color: Colors.grey.shade100.withOpacity(0.3),
               ),
             ),
           ),

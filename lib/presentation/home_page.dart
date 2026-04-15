@@ -54,6 +54,12 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  // Spacing system: _gap=8, _gapMd=16, _gapLg=24, _gapXl=32
+  static const _gap = 8.0;
+  static const _gapMd = 16.0;
+  static const _gapLg = 24.0;
+  static const _gapXl = 32.0;
+
   final GlobalKey _repaintKey = GlobalKey();
 
   Future<void> _shareMingPan() async {
@@ -118,11 +124,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           children: [
             // 日期时间选择
             _buildDateSelector(context, ref, birthDate),
-            const SizedBox(height: 16),
+            const SizedBox(height: _gapMd),
 
             // 性别选择
             _buildGenderSelector(context, ref, gender),
-            const SizedBox(height: 24),
+            const SizedBox(height: _gapLg),
 
             // 计算按钮
             FilledButton.icon(
@@ -130,24 +136,24 @@ class _HomePageState extends ConsumerState<HomePage> {
               icon: const Icon(Icons.calculate),
               label: const Text('排盘'),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: _gapLg),
 
             // 结果展示
             if (ref.watch(isCalculatingProvider)) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: _gapLg),
               const Center(child: CircularProgressIndicator()),
             ] else if (baziResult != null) ...[
               _buildResultCard(context, ref, baziResult),
-              const SizedBox(height: 24),
+              const SizedBox(height: _gapLg),
               _buildMingPanCanvas(context, ref, baziResult),
-              const SizedBox(height: 24),
+              const SizedBox(height: _gapLg),
               // 截图分享按钮
               OutlinedButton.icon(
                 onPressed: _shareMingPan,
                 icon: const Icon(Icons.share),
                 label: const Text('截图分享'),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: _gap),
               // 详情按钮
               OutlinedButton.icon(
                 onPressed: () {
@@ -165,36 +171,79 @@ class _HomePageState extends ConsumerState<HomePage> {
                 label: const Text('查看详情'),
               ),
             ] else ...[
-              const SizedBox(height: 48),
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.auto_awesome,
-                      size: 64,
-                      color: Colors.grey.shade400,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '选择日期，点击排盘',
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '八字命盘将显示在此处',
-                      style: TextStyle(
-                        color: Colors.grey.shade400,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: _gapXl * 1.5),
+              _buildEmptyState(context),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: _gapMd),
+        padding: const EdgeInsets.all(_gapXl * 1.5),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.amber.shade50,
+              Colors.amber.shade100,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Colors.amber.shade200,
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.amber.withValues(alpha: 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.amber.shade100,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.amber.shade300,
+                  width: 2,
                 ),
               ),
-            ],
+              child: Icon(
+                Icons.auto_awesome,
+                size: 40,
+                color: Colors.amber.shade700,
+              ),
+            ),
+            const SizedBox(height: _gapLg),
+            Text(
+              '选择日期，点击排盘',
+              style: TextStyle(
+                color: Colors.amber.shade900,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: _gap),
+            Text(
+              '八字命盘将显示在此处',
+              style: TextStyle(
+                color: Colors.amber.shade700,
+                fontSize: 14,
+              ),
+            ),
           ],
         ),
       ),
@@ -222,12 +271,13 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
   
   void _showScrollPickerDialog(BuildContext context, WidgetRef ref, DateTime initialDateTime) {
+    DateTime selectedDateTime = initialDateTime;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.7,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -241,7 +291,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(ctx),
                     child: const Text('取消'),
                   ),
                   const Text(
@@ -249,7 +299,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(ctx, selectedDateTime),
                     child: const Text('确定', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
@@ -263,16 +313,20 @@ class _HomePageState extends ConsumerState<HomePage> {
                 firstDate: DateTime(1900),
                 lastDate: DateTime.now(),
                 onDateTimeChanged: (DateTime newDateTime) {
-                  ref.read(birthDateProvider.notifier).state = newDateTime;
-                  ref.read(birthHourProvider.notifier).state = newDateTime.hour;
-                  ref.read(birthMinuteProvider.notifier).state = newDateTime.minute;
+                  selectedDateTime = newDateTime;
                 },
               ),
             ),
           ],
         ),
       ),
-    );
+    ).then((result) {
+      if (result != null && result is DateTime) {
+        ref.read(birthDateProvider.notifier).state = result;
+        ref.read(birthHourProvider.notifier).state = result.hour;
+        ref.read(birthMinuteProvider.notifier).state = result.minute;
+      }
+    });
   }
 
   // 已合并到日期选择器中
@@ -287,24 +341,38 @@ class _HomePageState extends ConsumerState<HomePage> {
             const Row(
               children: [
                 Icon(Icons.person),
-                SizedBox(width: 8),
+                SizedBox(width: _gap),
                 Text('性别', style: TextStyle(fontSize: 16)),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: _gapMd),
             Row(
               children: [
                 Expanded(
                   child: ChoiceChip(
-                    label: const Text('男'),
+                    label: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.male, size: 18),
+                        SizedBox(width: _gap),
+                        Text('男'),
+                      ],
+                    ),
                     selected: gender == '男',
                     onSelected: (_) => ref.read(genderProvider.notifier).state = '男',
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: _gapMd),
                 Expanded(
                   child: ChoiceChip(
-                    label: const Text('女'),
+                    label: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.female, size: 18),
+                        SizedBox(width: _gap),
+                        Text('女'),
+                      ],
+                    ),
                     selected: gender == '女',
                     onSelected: (_) => ref.read(genderProvider.notifier).state = '女',
                   ),
@@ -367,7 +435,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   '八字排盘结果',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: _gapMd),
                 // 日主强弱徽章
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -385,7 +453,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: _gap),
                 // 五行徽章
                 Text(
                   '日主${wx.GAN_WUXING_WUXING[bazi.dayGan]}行',
@@ -393,7 +461,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: _gapMd),
             // 五行旺度条
             Row(
               children: wuxingBars.map((wb) {
@@ -404,7 +472,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: Column(
                       children: [
                         Text(wb.$4, style: const TextStyle(fontSize: 10)),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: _gap),
                         Container(
                           height: 8,
                           decoration: BoxDecoration(
@@ -422,15 +490,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text('${wb.$2}', style: const TextStyle(fontSize: 9)),
+                        const SizedBox(height: _gap),
+                        Text('${(pct * 100).toInt()}%', style: const TextStyle(fontSize: 9)),
                       ],
                     ),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: _gapMd),
             _buildGanzhiRow('年柱', bazi.yearGanZhi),
             _buildGanzhiRow('月柱', bazi.monthGanZhi),
             _buildGanzhiRow('日柱', bazi.dayGanZhi),
@@ -444,7 +512,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     '大运：${dayunResult.direction.nameCn}',
                     style: const TextStyle(fontSize: 13),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: _gapMd),
                   Text(
                     '起运：${dayunResult.qiyun.sui}岁${dayunResult.qiyun.yue}月',
                     style: const TextStyle(fontSize: 13),
@@ -468,7 +536,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             width: 60,
             child: Text(label, style: const TextStyle(fontSize: 14)),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: _gap),
           Text(
             value,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -499,7 +567,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   color: Colors.grey.shade600,
                 ),
               ),
-              SizedBox(width: Responsive.spacing(context, 4)),
+              SizedBox(width: Responsive.spacing(context, _gap)),
               IconButton(
                 icon: Icon(
                   animationEnabled ? Icons.pause_circle : Icons.play_circle,
@@ -528,7 +596,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ],
               ),
               child: Padding(
-                padding: EdgeInsets.all(Responsive.spacing(context, 8)),
+                padding: EdgeInsets.all(Responsive.spacing(context, _gap)),
                 child: SizedBox(
                   width: size,
                   height: size,

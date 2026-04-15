@@ -13,10 +13,24 @@ class MingPanCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _MingPanPainter(bazi: bazi, isDark: isDark),
-      child: const SizedBox.expand(),
+    return Semantics(
+      label: '命盘图：年柱${bazi.yearGanZhi}，月柱${bazi.monthGanZhi}，日柱${bazi.dayGanZhi}，时柱${bazi.hourGanZhi}，日主${bazi.dayGan}五行属${_getWuxing(bazi.dayGan)}',
+      child: CustomPaint(
+        painter: _MingPanPainter(bazi: bazi, isDark: isDark),
+        child: const SizedBox.expand(),
+      ),
     );
+  }
+
+  String _getWuxing(String gan) {
+    final Map<String, String> map = {
+      '甲': '木', '乙': '木',
+      '丙': '火', '丁': '火',
+      '戊': '土', '己': '土',
+      '庚': '金', '辛': '金',
+      '壬': '水', '癸': '水',
+    };
+    return map[gan] ?? '';
   }
 }
 
@@ -53,7 +67,7 @@ class _MingPanPainter extends CustomPainter {
       ..strokeWidth = 1.5;
 
     // 绘制背景圆（最外圈为空白区域）
-    bgPaint.color = isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFFF8E1); // 米黄色背景
+    bgPaint.color = isDark ? const Color(0xFF0D1B2A) : const Color(0xFFFFF8E1); // 深海军蓝背景 / 米黄色背景
     canvas.drawCircle(center, layer5Radius, bgPaint);
 
     // 地支位置（12个宫位）
@@ -71,11 +85,14 @@ class _MingPanPainter extends CustomPainter {
     // 绘制中心（日主五行）
     _drawCenter(canvas, center, layer1Radius);
 
-    // 绘制四柱文字标注
+    // 绘制四柱标注
     _drawSiZhu(canvas, center, layer5Radius, layer3Radius, zhiAngles);
 
+    // 绘制藏干（8个非四正宫位）
+    _drawCangGan(canvas, center, layer4Radius, layer3Radius, zhiAngles);
+
     // 绘制分隔线
-    strokePaint.color = isDark ? Colors.grey.shade700 : Colors.brown.shade300;
+    strokePaint.color = isDark ? const Color(0xFF2C3E50) : Colors.brown.shade300;
     canvas.drawCircle(center, layer5Radius, strokePaint);
     canvas.drawCircle(center, layer4Radius, strokePaint);
     canvas.drawCircle(center, layer3Radius, strokePaint);
@@ -108,7 +125,7 @@ class _MingPanPainter extends CustomPainter {
   ) {
     final List<String> zhiOrder = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
 
-    strokePaint.color = isDark ? Colors.grey.shade600 : Colors.brown.shade400;
+    strokePaint.color = isDark ? const Color(0xFF34495E) : Colors.brown.shade400;
 
     for (int i = 0; i < 12; i++) {
       final angle1 = angles[zhiOrder[i]]!;
@@ -149,20 +166,21 @@ class _MingPanPainter extends CustomPainter {
     Map<String, double> angles,
   ) {
     // 地支颜色映射
+    // 地支颜色映射（暗色模式：子午蓝、寅卯木绿、申酉金、辰戌丑未土各有深浅层次）
     final Map<String, Color> zhiColor = isDark
         ? {
-            '子': const Color(0xFF90CAF9),
-            '丑': const Color(0xFFBCAAA4),
-            '寅': const Color(0xFFA5D6A7),
-            '卯': const Color(0xFF81C784),
-            '辰': const Color(0xFFBCAAA4),
-            '巳': const Color(0xFFEF9A9A),
-            '午': const Color(0xFFE57373),
-            '未': const Color(0xFFBCAAA4),
-            '申': const Color(0xFFBDBDBD),
-            '酉': const Color(0xFFE0E0E0),
-            '戌': const Color(0xFFBCAAA4),
-            '亥': const Color(0xFF90CAF9),
+            '子': const Color(0xFF64B5F6), // 阳水 - 浅蓝
+            '丑': const Color(0xFFA1887F), // 阴土 - 土褐
+            '寅': const Color(0xFF4CAF50), // 阳木 - 深绿
+            '卯': const Color(0xFF66BB6A), // 阴木 - 浅绿
+            '辰': const Color(0xFF8D6E63), // 阳土 - 深棕
+            '巳': const Color(0xFFEF5350), // 阴火 - 深红
+            '午': const Color(0xFFE53935), // 阳火 - 亮红
+            '未': const Color(0xFFBCAAA4), // 阴土 - 浅土
+            '申': const Color(0xFF90A4AE), // 阳金 - 蓝灰
+            '酉': const Color(0xFFB0BEC5), // 阴金 - 浅灰
+            '戌': const Color(0xFFD7CCC8), // 阳土 - 淡土
+            '亥': const Color(0xFF42A5F5), // 阴水 - 天蓝
           }
         : {
             '子': Colors.blue.shade700,
@@ -249,7 +267,7 @@ class _MingPanPainter extends CustomPainter {
     );
 
     // 年干在最外层（四柱位置）
-    _drawYearGanAtZhi(canvas, center, layer3R, layer2R, yearGan, textPainter);
+    _drawYearGanAtZhi(canvas, center, layer3R, layer2R, yearGan, bazi.yearZhi, textPainter);
   }
 
   void _drawGanAtRadius(
@@ -289,10 +307,11 @@ class _MingPanPainter extends CustomPainter {
     double layer3R,
     double layer2R,
     String gan,
+    String yearZhi,
     TextPainter textPainter,
   ) {
-    // 年支是子，所以年干画在子位
-    final angle = -math.pi / 2; // 子位在顶部
+    // 年干画在年支对应的地支位置
+    final angle = _getZhiAngles()[yearZhi]!;
 
     final midR = (layer3R + layer2R) / 2;
     final x = center.dx + midR * math.cos(angle);
@@ -353,7 +372,7 @@ class _MingPanPainter extends CustomPainter {
       text: wuxing,
       style: TextStyle(
         fontSize: 10,
-        color: isDark ? Colors.brown.shade300 : Colors.brown.shade700,
+        color: isDark ? const Color(0xFFFFCC80) : Colors.brown.shade700,
       ),
     );
     textPainter.layout();
@@ -430,6 +449,93 @@ class _MingPanPainter extends CustomPainter {
       canvas,
       Offset(x - textPainter.width / 2, y - textPainter.height / 2),
     );
+  }
+
+  /// 绘制藏干（8个非四正宫位）
+  void _drawCangGan(
+    Canvas canvas,
+    Offset center,
+    double outerR,
+    double innerR,
+    Map<String, double> angles,
+  ) {
+    // 藏干映射
+    final Map<String, List<String>> cangGanMap = {
+      '丑': ['己', '癸', '辛'],
+      '寅': ['甲', '丙', '戊'],
+      '辰': ['戊', '乙', '癸'],
+      '巳': ['丙', '庚', '戊'],
+      '未': ['己', '丁', '乙'],
+      '申': ['庚', '壬', '戊'],
+      '戌': ['戊', '辛', '丁'],
+      '亥': ['壬', '甲'],
+    };
+
+    // 藏干颜色（暗色模式：辅助信息层级，比地支更柔更暗）
+    final Map<String, Color> cangGanColor = isDark
+        ? {
+            '甲': const Color(0xFF81C784), // 阳木 - 柔绿
+            '乙': const Color(0xFFA5D6A7), // 阴木 - 浅柔绿
+            '丙': const Color(0xFFFF8A65), // 阳火 - 珊瑚橙
+            '丁': const Color(0xFFFF7043), // 阴火 - 深珊瑚
+            '戊': const Color(0xFFBCAAA4), // 阳土 - 浅土
+            '己': const Color(0xFFA1887F), // 阴土 - 土褐
+            '庚': const Color(0xFFB0BEC5), // 阳金 - 银灰
+            '辛': const Color(0xFF90A4AE), // 阴金 - 蓝灰
+            '壬': const Color(0xFF64B5F6), // 阳水 - 天蓝
+            '癸': const Color(0xFF42A5F5), // 阴水 - 深海蓝
+          }
+        : {
+            '甲': Colors.green.shade700,
+            '乙': Colors.green.shade500,
+            '丙': Colors.red.shade700,
+            '丁': Colors.red.shade600,
+            '戊': Colors.brown.shade500,
+            '己': Colors.brown.shade600,
+            '庚': Colors.grey.shade700,
+            '辛': Colors.grey.shade600,
+            '壬': Colors.blue.shade500,
+            '癸': Colors.blue.shade700,
+          };
+
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+
+    final midR = (outerR + innerR) / 2;
+
+    for (final entry in cangGanMap.entries) {
+      final zhi = entry.key;
+      final ganList = entry.value;
+      final angle = angles[zhi]!;
+
+      // 多个藏干垂直排列
+      final ganCount = ganList.length;
+      for (int i = 0; i < ganCount; i++) {
+        final gan = ganList[i];
+        // 藏干之间稍微偏移角度
+        final angleOffset = (i - (ganCount - 1) / 2) * 0.08;
+        final r = midR + (i - (ganCount - 1) / 2) * 12;
+
+        final x = center.dx + r * math.cos(angle + angleOffset);
+        final y = center.dy + r * math.sin(angle + angleOffset);
+
+        textPainter.text = TextSpan(
+          text: gan,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: cangGanColor[gan] ?? Colors.grey,
+          ),
+        );
+        textPainter.layout();
+        textPainter.paint(
+          canvas,
+          Offset(x - textPainter.width / 2, y - textPainter.height / 2),
+        );
+      }
+    }
   }
 
   /// 获取天干五行

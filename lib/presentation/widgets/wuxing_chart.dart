@@ -60,19 +60,19 @@ class WuxingEnergyChart extends StatelessWidget {
           Color levelColor;
           if (score >= maxScore * 0.8) {
             level = '极旺';
-            levelColor = Colors.red.shade700;
+            levelColor = const Color(0xFFD32F2F); // 深红
           } else if (score >= maxScore * 0.6) {
             level = '偏旺';
-            levelColor = Colors.orange.shade700;
+            levelColor = const Color(0xFFF57C00); // 橙色
           } else if (score >= maxScore * 0.4) {
             level = '中和';
-            levelColor = Colors.green.shade700;
+            levelColor = const Color(0xFF388E3C); // 绿色
           } else if (score >= maxScore * 0.2) {
             level = '偏弱';
-            levelColor = Colors.blue.shade700;
+            levelColor = const Color(0xFF1976D2); // 蓝色
           } else {
             level = '极弱';
-            levelColor = Colors.purple.shade700;
+            levelColor = const Color(0xFF7B1FA2); // 紫色
           }
           
           return Padding(
@@ -140,7 +140,8 @@ class WuxingEnergyChart extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: percentage > 0.5 ? Colors.white : Colors.grey.shade700,
+                                // 金行黄色背景配白色对比度不足，使用深色文字
+                                color: (percentage > 0.5 && wuxing != '金') ? Colors.white : Colors.grey.shade700,
                               ),
                             ),
                           ),
