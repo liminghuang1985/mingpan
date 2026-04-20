@@ -436,11 +436,10 @@ class _DateOnlyPickerState extends State<_DateOnlyPicker> {
     super.dispose();
   }
 
-  void _onYearChanged(int index) {
-    final newYear = widget.firstDate.year + index;
+  void _onYearChanged(int year) {
+    final maxDay = DateTime(year, _month, 0).day;
     setState(() {
-      _year = newYear;
-      final maxDay = DateTime(_year, _month + 1, 0).day;
+      _year = year;
       if (_day > maxDay) {
         _day = maxDay;
         _dayController.jumpToItem(_day - 1);
@@ -449,18 +448,20 @@ class _DateOnlyPickerState extends State<_DateOnlyPicker> {
     widget.onDateChanged(DateTime(_year, _month, _day));
   }
 
-  void _onMonthChanged(int index) {
-    setState(() => _month = index + 1);
-    final maxDay = DateTime(_year, _month, 0).day;
-    if (_day > maxDay) {
-      _day = maxDay;
-      _dayController.jumpToItem(_day - 1);
-    }
+  void _onMonthChanged(int month) {
+    final maxDay = DateTime(_year, month, 0).day;
+    setState(() {
+      _month = month;
+      if (_day > maxDay) {
+        _day = maxDay;
+        _dayController.jumpToItem(_day - 1);
+      }
+    });
     widget.onDateChanged(DateTime(_year, _month, _day));
   }
 
-  void _onDayChanged(int index) {
-    setState(() => _day = index + 1);
+  void _onDayChanged(int day) {
+    setState(() => _day = day);
     widget.onDateChanged(DateTime(_year, _month, _day));
   }
 
@@ -471,7 +472,7 @@ class _DateOnlyPickerState extends State<_DateOnlyPicker> {
       (i) => widget.firstDate.year + i,
     );
     final months = List.generate(12, (i) => i + 1);
-    final daysInMonth = DateTime(_year, _month + 1, 0).day;
+    final daysInMonth = DateTime(_year, _month, 0).day;
     final days = List.generate(daysInMonth, (i) => i + 1);
 
     return Row(
@@ -479,6 +480,7 @@ class _DateOnlyPickerState extends State<_DateOnlyPicker> {
         Expanded(
           child: _WheelPickerColumn(
             items: years,
+            selected: _year,
             label: '年',
             controller: _yearController,
             onChanged: _onYearChanged,
@@ -487,6 +489,7 @@ class _DateOnlyPickerState extends State<_DateOnlyPicker> {
         Expanded(
           child: _WheelPickerColumn(
             items: months,
+            selected: _month,
             label: '月',
             controller: _monthController,
             onChanged: _onMonthChanged,
@@ -495,6 +498,7 @@ class _DateOnlyPickerState extends State<_DateOnlyPicker> {
         Expanded(
           child: _WheelPickerColumn(
             items: days,
+            selected: _day,
             label: '日',
             controller: _dayController,
             onChanged: _onDayChanged,
@@ -565,6 +569,7 @@ class _TimeOnlyPickerState extends State<_TimeOnlyPicker> {
         Expanded(
           child: _WheelPickerColumn(
             items: hours,
+            selected: _hour,
             label: '时',
             controller: _hourController,
             onChanged: _onHourChanged,
@@ -573,6 +578,7 @@ class _TimeOnlyPickerState extends State<_TimeOnlyPicker> {
         Expanded(
           child: _WheelPickerColumn(
             items: minutes,
+            selected: _minute,
             label: '分',
             controller: _minuteController,
             onChanged: _onMinuteChanged,
@@ -587,12 +593,14 @@ class _TimeOnlyPickerState extends State<_TimeOnlyPicker> {
 
 class _WheelPickerColumn extends StatelessWidget {
   final List<int> items;
+  final int selected;
   final String label;
   final FixedExtentScrollController controller;
-  final void Function(int index) onChanged;
+  final void Function(int value) onChanged;
 
   const _WheelPickerColumn({
     required this.items,
+    required this.selected,
     required this.label,
     required this.controller,
     required this.onChanged,
@@ -600,6 +608,7 @@ class _WheelPickerColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedIndex = items.indexOf(selected.clamp(items.first, items.last));
     return Column(
       children: [
         Text(
@@ -610,17 +619,19 @@ class _WheelPickerColumn extends StatelessWidget {
           child: ListWheelScrollView.useDelegate(
             itemExtent: 40,
             physics: const FixedExtentScrollPhysics(),
-            onSelectedItemChanged: onChanged,
-            controller: controller,
+            onSelectedItemChanged: (index) => onChanged(items[index]),
+            controller: FixedExtentScrollController(initialItem: selectedIndex.clamp(0, items.length - 1)),
             childDelegate: ListWheelChildBuilderDelegate(
               childCount: items.length,
               builder: (ctx, i) {
-                final isSelected = controller.selectedItem == i;
+                final isSelected = i == selectedIndex;
                 return Center(
                   child: Text(
-                    items[i].toString().padLeft(2, '0'),
+                    items[i] >= 100
+                        ? items[i].toString()
+                        : items[i].toString().padLeft(2, '0'),
                     style: TextStyle(
-                      color: isSelected ? Colors.amber : Colors.white.withValues(alpha: 0.6),
+                      color: isSelected ? Colors.amber : Colors.white.withValues(alpha: 0.7),
                       fontSize: isSelected ? 22 : 18,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
