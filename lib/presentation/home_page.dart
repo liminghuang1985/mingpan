@@ -109,10 +109,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
       fit: StackFit.expand,
       children: [
         // 背景图
-        Image.asset(
-          'assets/images/bg_page3.jpg',
-          fit: BoxFit.cover,
-        ),
+        Image.asset('assets/images/bg_page3.jpg', fit: BoxFit.cover),
         // 底部渐变遮罩
         Container(
           decoration: BoxDecoration(
@@ -121,7 +118,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               end: Alignment.bottomCenter,
               colors: [
                 Colors.black.withValues(alpha: 0.1),
-                Colors.black.withValues(alpha: 0.5),
+                Colors.black.withValues(alpha: 0.55),
               ],
             ),
           ),
@@ -129,16 +126,29 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
         // 内容
         SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),
-                // 日期选择
-                _buildDateTile(ref, birthDate),
-                const SizedBox(height: 16),
-                // 时间选择
-                _buildTimeTile(ref, birthHour, birthMinute),
+                // 日期和时间左右并排
+                Row(
+                  children: [
+                    Expanded(child: _GlassTile(
+                      onTap: () => _showDatePicker(ref, birthDate),
+                      icon: Icons.calendar_today,
+                      label: '出生日期',
+                      value: DateFormat('yyyy年MM月dd日').format(birthDate),
+                    )),
+                    const SizedBox(width: 16),
+                    Expanded(child: _GlassTile(
+                      onTap: () => _showTimePicker(ref),
+                      icon: Icons.access_time,
+                      label: '出生时间',
+                      value: '${birthHour.toString().padLeft(2, '0')}:${birthMinute.toString().padLeft(2, '0')}',
+                    )),
+                  ],
+                ),
                 const SizedBox(height: 20),
                 // 性别选择
                 _buildGenderRow(ref, gender),
@@ -151,24 +161,6 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildDateTile(WidgetRef ref, DateTime date) {
-    return _GlassTile(
-      onTap: () => _showDatePicker(ref, date),
-      icon: Icons.calendar_today,
-      label: '出生日期',
-      value: DateFormat('yyyy年MM月dd日').format(date),
-    );
-  }
-
-  Widget _buildTimeTile(WidgetRef ref, int hour, int minute) {
-    return _GlassTile(
-      onTap: () => _showTimePicker(ref),
-      icon: Icons.access_time,
-      label: '出生时间',
-      value: '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}',
     );
   }
 
@@ -549,6 +541,7 @@ class _WheelPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedIndex = items.indexOf(selected.clamp(items.first, items.last));
     return Column(
       children: [
         Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14)),
@@ -557,15 +550,17 @@ class _WheelPicker extends StatelessWidget {
             itemExtent: 40,
             physics: const FixedExtentScrollPhysics(),
             onSelectedItemChanged: onChanged,
-            controller: FixedExtentScrollController(
-              initialItem: items.indexOf(selected.clamp(items.first, items.last)),
-            ),
+            controller: FixedExtentScrollController(initialItem: selectedIndex),
             childDelegate: ListWheelChildBuilderDelegate(
               childCount: items.length,
               builder: (ctx, i) => Center(
                 child: Text(
                   items[i].toString().padLeft(2, '0'),
-                  style: const TextStyle(color: Colors.white, fontSize: 20),
+                  style: TextStyle(
+                    color: i == selectedIndex ? Colors.amber : Colors.white.withValues(alpha: 0.7),
+                    fontSize: 20,
+                    fontWeight: i == selectedIndex ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
               ),
             ),
