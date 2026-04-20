@@ -34,9 +34,11 @@ class MainScaffold extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tab = ref.watch(currentTabProvider);
+    final pageController = PageController(initialPage: tab);
     return Scaffold(
-      body: IndexedStack(
-        index: tab,
+      body: PageView(
+        controller: pageController,
+        onPageChanged: (i) => ref.read(currentTabProvider.notifier).state = i,
         children: const [
           _HomeTab(),
           _MingPanTab(),
@@ -45,7 +47,10 @@ class MainScaffold extends ConsumerWidget {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
-        onDestinationSelected: (i) => ref.read(currentTabProvider.notifier).state = i,
+        onDestinationSelected: (i) {
+          ref.read(currentTabProvider.notifier).state = i;
+          pageController.animateToPage(i, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+        },
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: '首页'),
           NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: '命盘'),
@@ -81,7 +86,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
       children: [
         // 背景图
         Image.asset(
-          'assets/images/bg_page1.jpg',
+          'assets/images/bg_page3.jpg',
           fit: BoxFit.cover,
         ),
         // 底部渐变遮罩，让底部文字更清晰
@@ -514,7 +519,7 @@ class DetailPageBody extends ConsumerWidget {
       return Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset('assets/images/bg_page3.jpg', fit: BoxFit.cover),
+          Image.asset('assets/images/bg_page1.jpg', fit: BoxFit.cover),
           Container(color: Colors.black.withValues(alpha: 0.35)),
           Center(
             child: Column(
@@ -536,7 +541,7 @@ class DetailPageBody extends ConsumerWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.asset('assets/images/bg_page3.jpg', fit: BoxFit.cover),
+        Image.asset('assets/images/bg_page1.jpg', fit: BoxFit.cover),
         Container(color: Colors.black.withValues(alpha: 0.35)),
         SafeArea(
           child: DetailPage(bazi: bazi, dayunResult: dayunResult),
