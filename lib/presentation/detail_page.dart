@@ -48,9 +48,12 @@ class _DetailPageState extends ConsumerState<DetailPage> {
     final analysis = wx.analyzeBazi(bazi, gender: bazi.gender);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('命盘详情'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: const Text('命盘详情', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -59,26 +62,26 @@ class _DetailPageState extends ConsumerState<DetailPage> {
           children: [
             _buildBaziOverview(),
             const SizedBox(height: _gap),
-            ExpansionTile(
-              leading: const Icon(Icons.view_agenda, size: 20),
-              title: const Text('年柱 · 月柱', style: TextStyle(fontWeight: FontWeight.bold)),
+            _buildGlassExpansionTile(
+              icon: Icons.view_agenda,
+              title: '年柱 · 月柱',
               children: [
                 _buildGanzhiRow('年柱', bazi.yearGanZhi),
                 _buildGanzhiRow('月柱', bazi.monthGanZhi),
               ],
             ),
-            ExpansionTile(
-              leading: const Icon(Icons.view_agenda_outlined, size: 20),
-              title: const Text('日柱 · 时柱', style: TextStyle(fontWeight: FontWeight.bold)),
+            _buildGlassExpansionTile(
+              icon: Icons.view_agenda_outlined,
+              title: '日柱 · 时柱',
               children: [
                 _buildGanzhiRow('日柱', bazi.dayGanZhi),
                 _buildGanzhiRow('时柱', bazi.hourGanZhi),
               ],
             ),
             if (dayunResult != null) ...[
-              ExpansionTile(
-                leading: const Icon(Icons.timeline, size: 20),
-                title: const Text('大运时间线', style: TextStyle(fontWeight: FontWeight.bold)),
+              _buildGlassExpansionTile(
+                icon: Icons.timeline,
+                title: '大运时间线',
                 initiallyExpanded: true,
                 children: [
                   Padding(
@@ -90,36 +93,43 @@ class _DetailPageState extends ConsumerState<DetailPage> {
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                           ),
-                          builder: (ctx) => DraggableScrollableSheet(
-                            expand: false,
-                            initialChildSize: 0.6,
-                            maxChildSize: 0.9,
-                            builder: (_, controller) => SingleChildScrollView(
-                              controller: controller,
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Center(
-                                      child: Container(
-                                        width: 40,
-                                        height: 4,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade300,
-                                          borderRadius: BorderRadius.circular(2),
+                          builder: (ctx) => Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xDD1a1a2e),
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                            ),
+                            child: DraggableScrollableSheet(
+                              expand: false,
+                              initialChildSize: 0.6,
+                              maxChildSize: 0.9,
+                              builder: (_, controller) => SingleChildScrollView(
+                                controller: controller,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Center(
+                                        child: Container(
+                                          width: 40,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white24,
+                                            borderRadius: BorderRadius.circular(2),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(height: _gapMd + 4),
-                                    DayunDetailCard(
-                                      dayun: dayun,
-                                      isCurrentDayun: _getDayunForYear(DateTime.now().year)?.index == dayun.index,
-                                    ),
-                                  ],
+                                      const SizedBox(height: _gapMd + 4),
+                                      DayunDetailCard(
+                                        dayun: dayun,
+                                        isCurrentDayun: _getDayunForYear(DateTime.now().year)?.index == dayun.index,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -132,9 +142,9 @@ class _DetailPageState extends ConsumerState<DetailPage> {
               ),
               const SizedBox(height: _gap),
             ],
-            ExpansionTile(
-              leading: const Icon(Icons.pie_chart, size: 20),
-              title: const Text('五行能量分析', style: TextStyle(fontWeight: FontWeight.bold)),
+            _buildGlassExpansionTile(
+              icon: Icons.pie_chart,
+              title: '五行能量分析',
               initiallyExpanded: true,
               children: [
                 Padding(
@@ -144,9 +154,9 @@ class _DetailPageState extends ConsumerState<DetailPage> {
               ],
             ),
             const SizedBox(height: _gap),
-            ExpansionTile(
-              leading: const Icon(Icons.layers, size: 20),
-              title: const Text('地支藏干', style: TextStyle(fontWeight: FontWeight.bold)),
+            _buildGlassExpansionTile(
+              icon: Icons.layers,
+              title: '地支藏干',
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -155,9 +165,9 @@ class _DetailPageState extends ConsumerState<DetailPage> {
               ],
             ),
             const SizedBox(height: _gap),
-            ExpansionTile(
-              leading: const Icon(Icons.star, size: 20),
-              title: const Text('十神分析', style: TextStyle(fontWeight: FontWeight.bold)),
+            _buildGlassExpansionTile(
+              icon: Icons.star,
+              title: '十神分析',
               initiallyExpanded: false,
               children: [
                 Padding(
@@ -167,9 +177,9 @@ class _DetailPageState extends ConsumerState<DetailPage> {
               ],
             ),
             const SizedBox(height: _gap),
-            ExpansionTile(
-              leading: const Icon(Icons.calendar_today, size: 20),
-              title: const Text('流年轮播', style: TextStyle(fontWeight: FontWeight.bold)),
+            _buildGlassExpansionTile(
+              icon: Icons.calendar_today,
+              title: '流年轮播',
               initiallyExpanded: false,
               children: [
                 Padding(
@@ -183,9 +193,9 @@ class _DetailPageState extends ConsumerState<DetailPage> {
               ],
             ),
             const SizedBox(height: _gap),
-            ExpansionTile(
-              leading: const Icon(Icons.grid_on, size: 20),
-              title: const Text('流年网格（12年）', style: TextStyle(fontWeight: FontWeight.bold)),
+            _buildGlassExpansionTile(
+              icon: Icons.grid_on,
+              title: '流年网格（12年）',
               initiallyExpanded: false,
               children: [
                 Padding(
@@ -210,25 +220,68 @@ class _DetailPageState extends ConsumerState<DetailPage> {
   // ─────────────────────────────────────────────────────────────
 
   Widget _buildBaziOverview() {
-    return Card(
-      color: Colors.amber.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text('四柱八字',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: _gapMd),
-            _buildGanzhiRow('年柱', bazi.yearGanZhi),
-            _buildGanzhiRow('月柱', bazi.monthGanZhi),
-            _buildGanzhiRow('日柱', bazi.dayGanZhi),
-            _buildGanzhiRow('时柱', bazi.hourGanZhi),
-            const SizedBox(height: _gap),
-            Text(
-              '日主${bazi.dayGan}，${wx.GAN_WUXING_WUXING[bazi.dayGan]}行',
-              style: TextStyle(color: Colors.grey.shade700),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '四柱八字',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white.withValues(alpha: 0.95),
             ),
-          ],
+          ),
+          const SizedBox(height: _gapMd),
+          _buildGanzhiRow('年柱', bazi.yearGanZhi),
+          _buildGanzhiRow('月柱', bazi.monthGanZhi),
+          _buildGanzhiRow('日柱', bazi.dayGanZhi),
+          _buildGanzhiRow('时柱', bazi.hourGanZhi),
+          const SizedBox(height: _gap),
+          Text(
+            '日主${bazi.dayGan}，${wx.GAN_WUXING_WUXING[bazi.dayGan]}行',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassExpansionTile({
+    required IconData icon,
+    required String title,
+    List<Widget> children = const [],
+    bool initiallyExpanded = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+          splashColor: Colors.white.withValues(alpha: 0.1),
+        ),
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          leading: Icon(icon, size: 20, color: Colors.amber.shade300),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontSize: 15,
+            ),
+          ),
+          childrenPadding: EdgeInsets.zero,
+          children: children,
         ),
       ),
     );
@@ -242,18 +295,25 @@ class _DetailPageState extends ConsumerState<DetailPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(width: 60, child: Text(label, style: const TextStyle(fontSize: 14))),
+          SizedBox(
+            width: 60,
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14),
+            ),
+          ),
           const SizedBox(width: _gap),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: color.withValues(alpha: 0.3)),
+              border: Border.all(color: color.withValues(alpha: 0.5)),
             ),
-            child: Text(ganZhi,
-                style: TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+            child: Text(
+              ganZhi,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+            ),
           ),
         ],
       ),
@@ -282,10 +342,18 @@ class _DetailPageState extends ConsumerState<DetailPage> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 80, child: Text(label, style: const TextStyle(fontSize: 14))),
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 14),
+            ),
+          ),
           Expanded(
-            child: Text(detail,
-                style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+            child: Text(
+              detail,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
+            ),
           ),
         ],
       ),

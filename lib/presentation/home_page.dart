@@ -56,7 +56,7 @@ class MainScaffold extends ConsumerWidget {
   }
 }
 
-// ==================== 第一页：首页（输入） ====================
+// ==================== 第一页：首页（输入）====================
 
 class _HomeTab extends ConsumerStatefulWidget {
   const _HomeTab();
@@ -81,24 +81,55 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
       children: [
         // 背景图
         Image.asset(
-          'assets/images/home_bg.jpg',
+          'assets/images/bg_page1.jpg',
           fit: BoxFit.cover,
         ),
-        // 半透明遮罩，让文字和按钮更清晰
-        Container(color: Colors.black.withValues(alpha: 0.3)),
+        // 底部渐变遮罩，让底部文字更清晰
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.1),
+                Colors.black.withValues(alpha: 0.5),
+              ],
+            ),
+          ),
+        ),
         // 内容
         SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),
-                // 日期时间选择区
-                _buildInputCard(context, ref, birthDate, birthHour, birthMinute, gender),
+                // 标题
+                Center(
+                  child: Text(
+                    '命盘排盘',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 8),
+                      ],
+                      letterSpacing: 6,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 48),
+                // 日期时间选择 - 直接浮在背景上
+                _buildInputRow(context, ref, birthDate, birthHour, birthMinute),
                 const SizedBox(height: 20),
+                // 性别选择
+                _buildGenderRow(ref, gender),
+                const SizedBox(height: 32),
                 // 排盘按钮
                 _buildPaiPanButton(context, ref, birthDate, birthHour, birthMinute, gender, baziResult),
-                const SizedBox(height: 40),
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -107,106 +138,34 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
     );
   }
 
-  Widget _buildInputCard(BuildContext context, WidgetRef ref, DateTime birthDate, int hour, int minute, String gender) {
+  Widget _buildInputRow(BuildContext context, WidgetRef ref, DateTime birthDate, int hour, int minute) {
     final hourStr = hour.toString().padLeft(2, '0');
     final minStr = minute.toString().padLeft(2, '0');
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: Offset.zero,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                // 标题
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.auto_awesome, color: Colors.amber.shade300, size: 22),
-                    const SizedBox(width: 8),
-                    Text('命盘排盘', style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      shadows: [Shadow(color: Colors.black45, blurRadius: 4)],
-                    )),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                // 日期 + 时间 左右分栏
-                Row(
-                  children: [
-                    Expanded(child: _buildDateTile(ref, birthDate)),
-                    Container(width: 1, height: 50, color: Colors.white.withValues(alpha: 0.2), margin: const EdgeInsets.symmetric(horizontal: 12)),
-                    Expanded(child: _buildTimeTile(ref, hour, minStr)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // 性别选择
-                _buildGenderRow(ref, gender),
-              ],
-            ),
-          ),
-        ),
-      ),
+    return Row(
+      children: [
+        Expanded(child: _buildDateTile(ref, birthDate)),
+        const SizedBox(width: 16),
+        Expanded(child: _buildTimeTile(ref, hour, minStr)),
+      ],
     );
   }
 
   Widget _buildDateTile(WidgetRef ref, DateTime date) {
-    return InkWell(
+    return _GlassTile(
       onTap: () => _showDatePicker(ref, date),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          children: [
-            Icon(Icons.calendar_today, color: Colors.amber.shade300, size: 20),
-            const SizedBox(height: 6),
-            Text('出生日期', style: TextStyle(color: Colors.white70, fontSize: 12)),
-            const SizedBox(height: 4),
-            Text(DateFormat('yyyy年MM月dd日').format(date),
-              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+      icon: Icons.calendar_today,
+      label: '出生日期',
+      value: DateFormat('yyyy年MM月dd日').format(date),
     );
   }
 
   Widget _buildTimeTile(WidgetRef ref, int hour, String minute) {
-    return InkWell(
+    return _GlassTile(
       onTap: () => _showDatePicker(ref, ref.read(birthDateProvider)),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          children: [
-            Icon(Icons.access_time, color: Colors.amber.shade300, size: 20),
-            const SizedBox(height: 6),
-            Text('出生时间', style: TextStyle(color: Colors.white70, fontSize: 12)),
-            const SizedBox(height: 4),
-            Text('${hour.toString().padLeft(2, '0')}:$minute',
-              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      ),
+      icon: Icons.access_time,
+      label: '出生时间',
+      value: '${hour.toString().padLeft(2, '0')}:$minute',
     );
   }
 
@@ -215,7 +174,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildGenderChip(ref, '男', Icons.male, gender == '男'),
-        const SizedBox(width: 16),
+        const SizedBox(width: 24),
         _buildGenderChip(ref, '女', Icons.female, gender == '女'),
       ],
     );
@@ -225,9 +184,11 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
     return GestureDetector(
       onTap: () => ref.read(genderProvider.notifier).state = label,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? Colors.amber.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.1),
+          color: selected
+              ? Colors.amber.withValues(alpha: 0.25)
+              : Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
             color: selected ? Colors.amber : Colors.white.withValues(alpha: 0.3),
@@ -235,20 +196,33 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
           ),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: selected ? Colors.amber : Colors.white70, size: 18),
-            const SizedBox(width: 6),
-            Text(label, style: TextStyle(
-              color: selected ? Colors.amber : Colors.white70,
-              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-            )),
+            Icon(icon, color: selected ? Colors.amber : Colors.white70, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.amber : Colors.white70,
+                fontSize: 16,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPaiPanButton(BuildContext context, WidgetRef ref, DateTime birthDate, int hour, int minute, String gender, Bazi? baziResult) {
+  Widget _buildPaiPanButton(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime birthDate,
+    int hour,
+    int minute,
+    String gender,
+    Bazi? baziResult,
+  ) {
     return GestureDetector(
       onTap: () => _calculateAndNavigate(context, ref, birthDate, hour, minute, gender),
       child: Container(
@@ -270,12 +244,15 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
           children: [
             Icon(Icons.bolt, color: Colors.white, size: 22),
             SizedBox(width: 8),
-            Text('排  盘', style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 4,
-            )),
+            Text(
+              '排  盘',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 4,
+              ),
+            ),
           ],
         ),
       ),
@@ -333,20 +310,77 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
     );
   }
 
-  Future<void> _calculateAndNavigate(BuildContext context, WidgetRef ref, DateTime birthDate, int hour, int minute, String gender) async {
+  Future<void> _calculateAndNavigate(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime birthDate,
+    int hour,
+    int minute,
+    String gender,
+  ) async {
     ref.read(isCalculatingProvider.notifier).state = true;
-
     await Future.delayed(const Duration(milliseconds: 300));
-
-    final bazi = Bazi.fromResult(calculateBazi(birthDate.year, birthDate.month, birthDate.day, hour, minute), birthDate, gender);
+    final bazi = Bazi.fromResult(
+      calculateBazi(birthDate.year, birthDate.month, birthDate.day, hour, minute),
+      birthDate,
+      gender,
+    );
     final dayunResult = calculateDayun(bazi, birthDate);
-
     ref.read(baziResultProvider.notifier).state = bazi;
     ref.read(dayunResultProvider.notifier).state = dayunResult;
     ref.read(isCalculatingProvider.notifier).state = false;
-
-    // 跳到命盘页
     ref.read(currentTabProvider.notifier).state = 1;
+  }
+}
+
+// ==================== 磨砂玻璃瓦片组件 ====================
+
+class _GlassTile extends StatelessWidget {
+  final VoidCallback onTap;
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _GlassTile({
+    required this.onTap,
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.amber.shade300, size: 22),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -360,52 +394,42 @@ class _MingPanTab extends ConsumerWidget {
     final bazi = ref.watch(baziResultProvider);
     final dayunResult = ref.watch(dayunResultProvider);
 
-    if (bazi == null) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.auto_awesome_outlined, size: 64, color: Colors.white30),
-            SizedBox(height: 16),
-            Text('暂无命盘数据', style: TextStyle(color: Colors.white54, fontSize: 16)),
-            SizedBox(height: 8),
-            Text('请先在首页进行排盘', style: TextStyle(color: Colors.white38, fontSize: 14)),
-          ],
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 背景图
+        Image.asset(
+          'assets/images/bg_page2.jpg',
+          fit: BoxFit.cover,
         ),
-      );
-    }
-
-    final analysis = wx.analyzeBazi(bazi, gender: bazi.gender);
-
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f3460)],
-        ),
-      ),
-      child: SafeArea(
-        child: Column(
-          children: [
-            // 八字结果头部
-            _buildBaziHeader(bazi, analysis),
-            const Divider(color: Colors.white12),
-            // 命盘动画
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: MingPanAnimatedCanvas(
-                  bazi: bazi,
-                  autoPlay: true,
-                  dayunResult: dayunResult,
-                  isDark: true,
+        // 半透明遮罩
+        Container(color: Colors.black.withValues(alpha: 0.35)),
+        // 内容
+        SafeArea(
+          child: Column(
+            children: [
+              // 八字头部
+              if (bazi != null) _buildBaziHeader(bazi, wx.analyzeBazi(bazi, gender: bazi.gender)),
+              if (bazi == null)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.auto_awesome_outlined, size: 64, color: Colors.white.withValues(alpha: 0.4)),
+                        const SizedBox(height: 16),
+                        Text(
+                          '暂无命盘数据',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -414,60 +438,62 @@ class _MingPanTab extends ConsumerWidget {
     Color strengthColor;
     String strengthLabel;
     if (strength.level == wx.StrengthLevel.qiang || strength.level == wx.StrengthLevel.pianQiang) {
-      strengthColor = Colors.redAccent; strengthLabel = '强';
+      strengthColor = Colors.redAccent;
+      strengthLabel = '强';
     } else if (strength.level == wx.StrengthLevel.zhongHe) {
-      strengthColor = Colors.amber; strengthLabel = '中和';
+      strengthColor = Colors.amber;
+      strengthLabel = '中和';
     } else {
-      strengthColor = Colors.cyanAccent; strengthLabel = '弱';
+      strengthColor = Colors.cyanAccent;
+      strengthLabel = '弱';
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildGanZhiPill('年', bazi.yearGanZhi, Colors.indigoAccent),
-              _buildGanZhiPill('月', bazi.monthGanZhi, Colors.tealAccent),
-              _buildGanZhiPill('日', bazi.dayGanZhi, Colors.deepOrangeAccent),
-              _buildGanZhiPill('时', bazi.hourGanZhi, Colors.purpleAccent),
+              _buildGanZhiText('年', bazi.yearGanZhi, Colors.indigoAccent),
+              _buildGanZhiText('月', bazi.monthGanZhi, Colors.tealAccent),
+              _buildGanZhiText('日', bazi.dayGanZhi, Colors.deepOrangeAccent),
+              _buildGanZhiText('时', bazi.hourGanZhi, Colors.purpleAccent),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: strengthColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: strengthColor.withValues(alpha: 0.5)),
-                ),
-                child: Text('日主${bazi.dayGan} · ${wx.GAN_WUXING_WUXING[bazi.dayGan]}行  $strengthLabel',
-                  style: TextStyle(color: strengthColor, fontSize: 13, fontWeight: FontWeight.w600)),
-              ),
-            ],
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              '日主${bazi.dayGan} · ${wx.GAN_WUXING_WUXING[bazi.dayGan]}行  $strengthLabel',
+              style: TextStyle(color: strengthColor, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGanZhiPill(String label, String gz, Color color) {
+  Widget _buildGanZhiText(String label, String gz, Color color) {
     return Column(
       children: [
-        Text(label, style: TextStyle(color: Colors.white54, fontSize: 11)),
+        Text(
+          label,
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
+        ),
         const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withValues(alpha: 0.4)),
+        Text(
+          gz,
+          style: TextStyle(
+            color: color,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            shadows: [Shadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 4)],
           ),
-          child: Text(gz, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.bold)),
         ),
       ],
     );
@@ -485,18 +511,37 @@ class DetailPageBody extends ConsumerWidget {
     final dayunResult = ref.watch(dayunResultProvider);
 
     if (bazi == null) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.info_outline, size: 64, color: Colors.white30),
-            SizedBox(height: 16),
-            Text('暂无命盘数据', style: TextStyle(color: Colors.white54, fontSize: 16)),
-          ],
-        ),
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset('assets/images/bg_page3.jpg', fit: BoxFit.cover),
+          Container(color: Colors.black.withValues(alpha: 0.35)),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.info_outline, size: 64, color: Colors.white.withValues(alpha: 0.4)),
+                const SizedBox(height: 16),
+                Text(
+                  '暂无命盘数据',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ],
       );
     }
 
-    return DetailPage(bazi: bazi, dayunResult: dayunResult);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset('assets/images/bg_page3.jpg', fit: BoxFit.cover),
+        Container(color: Colors.black.withValues(alpha: 0.35)),
+        SafeArea(
+          child: DetailPage(bazi: bazi, dayunResult: dayunResult),
+        ),
+      ],
+    );
   }
 }
