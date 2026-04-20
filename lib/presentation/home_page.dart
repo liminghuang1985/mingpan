@@ -1,8 +1,4 @@
-import 'dart:ui' as ui;
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -28,16 +24,40 @@ final currentTabProvider = StateProvider<int>((ref) => 0);
 
 // ==================== 主入口：底部导航 Scaffold ====================
 
-class MainScaffold extends ConsumerWidget {
+class MainScaffold extends ConsumerStatefulWidget {
   const MainScaffold({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends ConsumerState<MainScaffold> {
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: ref.read(currentTabProvider));
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final tab = ref.watch(currentTabProvider);
-    final pageController = PageController(initialPage: tab);
+    // 同步 PageView 到正确页面（外部改变 tab 时）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_pageController.hasClients && _pageController.page?.round() != tab) {
+        _pageController.jumpToPage(tab);
+      }
+    });
     return Scaffold(
       body: PageView(
-        controller: pageController,
+        controller: _pageController,
         onPageChanged: (i) => ref.read(currentTabProvider.notifier).state = i,
         children: const [
           _HomeTab(),
@@ -49,7 +69,11 @@ class MainScaffold extends ConsumerWidget {
         selectedIndex: tab,
         onDestinationSelected: (i) {
           ref.read(currentTabProvider.notifier).state = i;
-          pageController.animateToPage(i, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+          _pageController.animateToPage(
+            i,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
         },
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: '首页'),
@@ -89,7 +113,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
           'assets/images/bg_page3.jpg',
           fit: BoxFit.cover,
         ),
-        // 底部渐变遮罩，让底部文字更清晰
+        // 底部渐变遮罩
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -110,24 +134,11 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),
-                // 标题
-                Center(
-                  child: Text(
-                    '命盘排盘',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      shadows: [
-                        Shadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 8),
-                      ],
-                      letterSpacing: 6,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 48),
-                // 日期时间选择 - 直接浮在背景上
-                _buildInputRow(context, ref, birthDate, birthHour, birthMinute),
+                // 日期选择
+                _buildDateTile(ref, birthDate),
+                const SizedBox(height: 16),
+                // 时间选择
+                _buildTimeTile(ref, birthHour, birthMinute),
                 const SizedBox(height: 20),
                 // 性别选择
                 _buildGenderRow(ref, gender),
@@ -143,19 +154,6 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
     );
   }
 
-  Widget _buildInputRow(BuildContext context, WidgetRef ref, DateTime birthDate, int hour, int minute) {
-    final hourStr = hour.toString().padLeft(2, '0');
-    final minStr = minute.toString().padLeft(2, '0');
-
-    return Row(
-      children: [
-        Expanded(child: _buildDateTile(ref, birthDate)),
-        const SizedBox(width: 16),
-        Expanded(child: _buildTimeTile(ref, hour, minStr)),
-      ],
-    );
-  }
-
   Widget _buildDateTile(WidgetRef ref, DateTime date) {
     return _GlassTile(
       onTap: () => _showDatePicker(ref, date),
@@ -165,12 +163,12 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
     );
   }
 
-  Widget _buildTimeTile(WidgetRef ref, int hour, String minute) {
+  Widget _buildTimeTile(WidgetRef ref, int hour, int minute) {
     return _GlassTile(
-      onTap: () => _showDatePicker(ref, ref.read(birthDateProvider)),
+      onTap: () => _showTimePicker(ref),
       icon: Icons.access_time,
       label: '出生时间',
-      value: '${hour.toString().padLeft(2, '0')}:$minute',
+      value: '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}',
     );
   }
 
@@ -178,37 +176,37 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildGenderChip(ref, '男', Icons.male, gender == '男'),
+        _buildGenderChip(ref, '男', Icons.male, gender == '男', Colors.amber),
         const SizedBox(width: 24),
-        _buildGenderChip(ref, '女', Icons.female, gender == '女'),
+        _buildGenderChip(ref, '女', Icons.female, gender == '女', Colors.purple),
       ],
     );
   }
 
-  Widget _buildGenderChip(WidgetRef ref, String label, IconData icon, bool selected) {
+  Widget _buildGenderChip(WidgetRef ref, String label, IconData icon, bool selected, Color selectedColor) {
     return GestureDetector(
       onTap: () => ref.read(genderProvider.notifier).state = label,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
         decoration: BoxDecoration(
           color: selected
-              ? Colors.amber.withValues(alpha: 0.25)
+              ? selectedColor.withValues(alpha: 0.25)
               : Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-            color: selected ? Colors.amber : Colors.white.withValues(alpha: 0.3),
+            color: selected ? selectedColor : Colors.white.withValues(alpha: 0.3),
             width: selected ? 1.5 : 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: selected ? Colors.amber : Colors.white70, size: 20),
+            Icon(icon, color: selected ? selectedColor : Colors.white70, size: 20),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.amber : Colors.white70,
+                color: selected ? selectedColor : Colors.white70,
                 fontSize: 16,
                 fontWeight: selected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -264,21 +262,14 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
     );
   }
 
+  // 单独日期选择器
   void _showDatePicker(WidgetRef ref, DateTime initial) {
-    final now = DateTime.now();
-    final currentDateTime = DateTime(
-      ref.read(birthDateProvider).year,
-      ref.read(birthDateProvider).month,
-      ref.read(birthDateProvider).day,
-      ref.read(birthHourProvider),
-      ref.read(birthMinuteProvider),
-    );
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        height: MediaQuery.of(ctx).size.height * 0.7,
+        height: MediaQuery.of(ctx).size.height * 0.65,
         decoration: const BoxDecoration(
           color: Color(0xDD1a1a2e),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -290,22 +281,86 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消', style: TextStyle(color: Colors.white70))),
-                  const Text('选择出生日期时间', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  TextButton(onPressed: () => Navigator.pop(ctx, currentDateTime), child: const Text('确定', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold))),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('取消', style: TextStyle(color: Colors.white70)),
+                  ),
+                  const Text('选择出生日期', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('确定', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                  ),
                 ],
               ),
             ),
             const Divider(color: Colors.white24, height: 1),
             Expanded(
-              child: DateTimeScrollPicker(
-                initialDate: currentDateTime,
+              child: _DateOnlyPicker(
+                initialDate: initial,
                 firstDate: DateTime(1900),
-                lastDate: now,
-                onDateTimeChanged: (dt) {
-                  ref.read(birthDateProvider.notifier).state = dt;
-                  ref.read(birthHourProvider.notifier).state = dt.hour;
-                  ref.read(birthMinuteProvider.notifier).state = dt.minute;
+                lastDate: DateTime.now(),
+                onDateChanged: (date) {
+                  ref.read(birthDateProvider.notifier).state = DateTime(
+                    date.year,
+                    date.month,
+                    date.day,
+                    ref.read(birthHourProvider),
+                    ref.read(birthMinuteProvider),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 单独时间选择器
+  void _showTimePicker(WidgetRef ref) {
+    final currentHour = ref.read(birthHourProvider);
+    final currentMinute = ref.read(birthMinuteProvider);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.5,
+        decoration: const BoxDecoration(
+          color: Color(0xDD1a1a2e),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('取消', style: TextStyle(color: Colors.white70)),
+                  ),
+                  const Text('选择出生时间', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  TextButton(
+                    onPressed: () {
+                      ref.read(birthHourProvider.notifier).state = currentHour;
+                      ref.read(birthMinuteProvider.notifier).state = currentMinute;
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('确定', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Colors.white24, height: 1),
+            Expanded(
+              child: _TimeOnlyPicker(
+                initialHour: currentHour,
+                initialMinute: currentMinute,
+                onTimeChanged: (h, m) {
+                  ref.read(birthHourProvider.notifier).state = h;
+                  ref.read(birthMinuteProvider.notifier).state = m;
                 },
               ),
             ),
@@ -334,7 +389,190 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
     ref.read(baziResultProvider.notifier).state = bazi;
     ref.read(dayunResultProvider.notifier).state = dayunResult;
     ref.read(isCalculatingProvider.notifier).state = false;
+    // 切换到第二页（通过 MainScaffold 状态触发 jumpToPage）
     ref.read(currentTabProvider.notifier).state = 1;
+  }
+}
+
+// ==================== 日期选择器（仅日期）====================
+
+class _DateOnlyPicker extends StatefulWidget {
+  final DateTime initialDate;
+  final DateTime firstDate;
+  final DateTime lastDate;
+  final ValueChanged<DateTime> onDateChanged;
+
+  const _DateOnlyPicker({
+    required this.initialDate,
+    required this.firstDate,
+    required this.lastDate,
+    required this.onDateChanged,
+  });
+
+  @override
+  State<_DateOnlyPicker> createState() => _DateOnlyPickerState();
+}
+
+class _DateOnlyPickerState extends State<_DateOnlyPicker> {
+  late int _year;
+  late int _month;
+  late int _day;
+
+  @override
+  void initState() {
+    super.initState();
+    _year = widget.initialDate.year;
+    _month = widget.initialDate.month;
+    _day = widget.initialDate.day;
+  }
+
+  void _notify() {
+    widget.onDateChanged(DateTime(_year, _month, _day));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final years = List.generate(widget.lastDate.year - widget.firstDate.year + 1,
+        (i) => widget.firstDate.year + i);
+    final months = List.generate(12, (i) => i + 1);
+    final daysInMonth = DateTime(_year, _month + 1, 0).day;
+    final days = List.generate(daysInMonth, (i) => i + 1);
+
+    return Row(
+      children: [
+        // 年
+        Expanded(child: _WheelPicker(
+          items: years,
+          selected: _year,
+          label: '年',
+          onChanged: (v) => setState(() {
+            _year = v;
+            final maxDay = DateTime(_year, _month + 1, 0).day;
+            if (_day > maxDay) _day = maxDay;
+            _notify();
+          }),
+        )),
+        // 月
+        Expanded(child: _WheelPicker(
+          items: months,
+          selected: _month,
+          label: '月',
+          onChanged: (v) => setState(() {
+            _month = v;
+            final maxDay = DateTime(_year, _month + 1, 0).day;
+            if (_day > maxDay) _day = maxDay;
+            _notify();
+          }),
+        )),
+        // 日
+        Expanded(child: _WheelPicker(
+          items: days,
+          selected: _day,
+          label: '日',
+          onChanged: (v) => setState(() { _day = v; _notify(); }),
+        )),
+      ],
+    );
+  }
+}
+
+// ==================== 时间选择器（仅时间）====================
+
+class _TimeOnlyPicker extends StatefulWidget {
+  final int initialHour;
+  final int initialMinute;
+  final void Function(int hour, int minute) onTimeChanged;
+
+  const _TimeOnlyPicker({
+    required this.initialHour,
+    required this.initialMinute,
+    required this.onTimeChanged,
+  });
+
+  @override
+  State<_TimeOnlyPicker> createState() => _TimeOnlyPickerState();
+}
+
+class _TimeOnlyPickerState extends State<_TimeOnlyPicker> {
+  late int _hour;
+  late int _minute;
+
+  @override
+  void initState() {
+    super.initState();
+    _hour = widget.initialHour;
+    _minute = widget.initialMinute;
+  }
+
+  void _notify() {
+    widget.onTimeChanged(_hour, _minute);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hours = List.generate(24, (i) => i);
+    final minutes = List.generate(60, (i) => i);
+
+    return Row(
+      children: [
+        Expanded(child: _WheelPicker(
+          items: hours,
+          selected: _hour,
+          label: '时',
+          onChanged: (v) => setState(() { _hour = v; _notify(); }),
+        )),
+        Expanded(child: _WheelPicker(
+          items: minutes,
+          selected: _minute,
+          label: '分',
+          onChanged: (v) => setState(() { _minute = v; _notify(); }),
+        )),
+      ],
+    );
+  }
+}
+
+// ==================== 滚轮选择器组件 ====================
+
+class _WheelPicker extends StatelessWidget {
+  final List<int> items;
+  final int selected;
+  final String label;
+  final ValueChanged<int> onChanged;
+
+  const _WheelPicker({
+    required this.items,
+    required this.selected,
+    required this.label,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14)),
+        Expanded(
+          child: ListWheelScrollView.useDelegate(
+            itemExtent: 40,
+            physics: const FixedExtentScrollPhysics(),
+            onSelectedItemChanged: onChanged,
+            controller: FixedExtentScrollController(
+              initialItem: items.indexOf(selected.clamp(items.first, items.last)),
+            ),
+            childDelegate: ListWheelChildBuilderDelegate(
+              childCount: items.length,
+              builder: (ctx, i) => Center(
+                child: Text(
+                  items[i].toString().padLeft(2, '0'),
+                  style: const TextStyle(color: Colors.white, fontSize: 20),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -364,23 +602,27 @@ class _GlassTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
         ),
-        child: Column(
+        child: Row(
           children: [
             Icon(icon, color: Colors.amber.shade300, size: 22),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -397,7 +639,6 @@ class _MingPanTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bazi = ref.watch(baziResultProvider);
-    final dayunResult = ref.watch(dayunResultProvider);
 
     return Stack(
       fit: StackFit.expand,
@@ -409,28 +650,26 @@ class _MingPanTab extends ConsumerWidget {
         ),
         // 半透明遮罩
         Container(color: Colors.black.withValues(alpha: 0.35)),
-        // 内容
+        // 内容 - 八字头部居中偏下
         SafeArea(
           child: Column(
             children: [
+              const Spacer(flex: 1),
               // 八字头部
               if (bazi != null) _buildBaziHeader(bazi, wx.analyzeBazi(bazi, gender: bazi.gender)),
               if (bazi == null)
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.auto_awesome_outlined, size: 64, color: Colors.white.withValues(alpha: 0.4)),
-                        const SizedBox(height: 16),
-                        Text(
-                          '暂无命盘数据',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 16),
-                        ),
-                      ],
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.auto_awesome_outlined, size: 64, color: Colors.white.withValues(alpha: 0.4)),
+                    const SizedBox(height: 16),
+                    Text(
+                      '暂无命盘数据',
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 16),
                     ),
-                  ),
+                  ],
                 ),
+              const Spacer(flex: 2),
             ],
           ),
         ),
@@ -454,7 +693,7 @@ class _MingPanTab extends ConsumerWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         children: [
           Row(
