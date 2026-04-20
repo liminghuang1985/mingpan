@@ -336,8 +336,9 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                   const Text('选择出生时间', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   TextButton(
                     onPressed: () {
-                      ref.read(birthHourProvider.notifier).state = currentHour;
-                      ref.read(birthMinuteProvider.notifier).state = currentMinute;
+                      // 实时读取最新的 provider 值（用户可能滚动了滚轮）
+                      ref.read(birthHourProvider.notifier).state = ref.read(birthHourProvider);
+                      ref.read(birthMinuteProvider.notifier).state = ref.read(birthMinuteProvider);
                       Navigator.pop(ctx);
                     },
                     child: const Text('确定', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
@@ -541,7 +542,7 @@ class _WheelPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedIndex = items.indexOf(selected.clamp(items.first, items.last));
+    final selectedIndex = items.indexOf(selected);
     return Column(
       children: [
         Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14)),
@@ -550,12 +551,14 @@ class _WheelPicker extends StatelessWidget {
             itemExtent: 40,
             physics: const FixedExtentScrollPhysics(),
             onSelectedItemChanged: onChanged,
-            controller: FixedExtentScrollController(initialItem: selectedIndex),
+            controller: FixedExtentScrollController(
+              initialItem: selectedIndex >= 0 ? selectedIndex : 0,
+            ),
             childDelegate: ListWheelChildBuilderDelegate(
               childCount: items.length,
               builder: (ctx, i) => Center(
                 child: Text(
-                  items[i].toString().padLeft(2, '0'),
+                  items[i].toString(),
                   style: TextStyle(
                     color: i == selectedIndex ? Colors.amber : Colors.white.withValues(alpha: 0.7),
                     fontSize: 20,
