@@ -411,59 +411,95 @@ class _DateOnlyPickerState extends State<_DateOnlyPicker> {
   late int _month;
   late int _day;
 
+  late final FixedExtentScrollController _yearController;
+  late final FixedExtentScrollController _monthController;
+  late final FixedExtentScrollController _dayController;
+
   @override
   void initState() {
     super.initState();
     _year = widget.initialDate.year;
     _month = widget.initialDate.month;
     _day = widget.initialDate.day;
+    _yearController = FixedExtentScrollController(
+      initialItem: _year - widget.firstDate.year,
+    );
+    _monthController = FixedExtentScrollController(initialItem: _month - 1);
+    _dayController = FixedExtentScrollController(initialItem: _day - 1);
   }
 
-  void _notify() {
+  @override
+  void dispose() {
+    _yearController.dispose();
+    _monthController.dispose();
+    _dayController.dispose();
+    super.dispose();
+  }
+
+  void _onYearChanged(int index) {
+    final newYear = widget.firstDate.year + index;
+    setState(() {
+      _year = newYear;
+      final maxDay = DateTime(_year, _month + 1, 0).day;
+      if (_day > maxDay) {
+        _day = maxDay;
+        _dayController.jumpToItem(_day - 1);
+      }
+    });
+    widget.onDateChanged(DateTime(_year, _month, _day));
+  }
+
+  void _onMonthChanged(int index) {
+    setState(() => _month = index + 1);
+    final maxDay = DateTime(_year, _month, 0).day;
+    if (_day > maxDay) {
+      _day = maxDay;
+      _dayController.jumpToItem(_day - 1);
+    }
+    widget.onDateChanged(DateTime(_year, _month, _day));
+  }
+
+  void _onDayChanged(int index) {
+    setState(() => _day = index + 1);
     widget.onDateChanged(DateTime(_year, _month, _day));
   }
 
   @override
   Widget build(BuildContext context) {
-    final years = List.generate(widget.lastDate.year - widget.firstDate.year + 1,
-        (i) => widget.firstDate.year + i);
+    final years = List.generate(
+      widget.lastDate.year - widget.firstDate.year + 1,
+      (i) => widget.firstDate.year + i,
+    );
     final months = List.generate(12, (i) => i + 1);
     final daysInMonth = DateTime(_year, _month + 1, 0).day;
     final days = List.generate(daysInMonth, (i) => i + 1);
 
     return Row(
       children: [
-        // 年
-        Expanded(child: _WheelPicker(
-          items: years,
-          selected: _year,
-          label: '年',
-          onChanged: (v) => setState(() {
-            _year = v;
-            final maxDay = DateTime(_year, _month + 1, 0).day;
-            if (_day > maxDay) _day = maxDay;
-            _notify();
-          }),
-        )),
-        // 月
-        Expanded(child: _WheelPicker(
-          items: months,
-          selected: _month,
-          label: '月',
-          onChanged: (v) => setState(() {
-            _month = v;
-            final maxDay = DateTime(_year, _month + 1, 0).day;
-            if (_day > maxDay) _day = maxDay;
-            _notify();
-          }),
-        )),
-        // 日
-        Expanded(child: _WheelPicker(
-          items: days,
-          selected: _day,
-          label: '日',
-          onChanged: (v) => setState(() { _day = v; _notify(); }),
-        )),
+        Expanded(
+          child: _WheelPickerColumn(
+            items: years,
+            label: '年',
+            controller: _yearController,
+            onChanged: _onYearChanged,
+          ),
+        ),
+        Expanded(
+          child: _WheelPickerColumn(
+            items: months,
+            label: '月',
+            controller: _monthController,
+            onChanged: _onMonthChanged,
+          ),
+        ),
+        Expanded(
+          child: _WheelPickerColumn(
+            items: days,
+            label: '日',
+            controller: _dayController,
+            onChanged: _onDayChanged,
+          ),
+        ),
       ],
     );
   }
@@ -490,14 +526,32 @@ class _TimeOnlyPickerState extends State<_TimeOnlyPicker> {
   late int _hour;
   late int _minute;
 
+  late final FixedExtentScrollController _hourController;
+  late final FixedExtentScrollController _minuteController;
+
   @override
   void initState() {
     super.initState();
     _hour = widget.initialHour;
     _minute = widget.initialMinute;
+    _hourController = FixedExtentScrollController(initialItem: _hour);
+    _minuteController = FixedExtentScrollController(initialItem: _minute);
   }
 
-  void _notify() {
+  @override
+  void dispose() {
+    _hourController.dispose();
+    _minuteController.dispose();
+    super.dispose();
+  }
+
+  void _onHourChanged(int index) {
+    setState(() => _hour = index);
+    widget.onTimeChanged(_hour, _minute);
+  }
+
+  void _onMinuteChanged(int index) {
+    setState(() => _minute = index);
     widget.onTimeChanged(_hour, _minute);
   }
 
@@ -508,64 +562,71 @@ class _TimeOnlyPickerState extends State<_TimeOnlyPicker> {
 
     return Row(
       children: [
-        Expanded(child: _WheelPicker(
-          items: hours,
-          selected: _hour,
-          label: '时',
-          onChanged: (v) => setState(() { _hour = v; _notify(); }),
-        )),
-        Expanded(child: _WheelPicker(
-          items: minutes,
-          selected: _minute,
-          label: '分',
-          onChanged: (v) => setState(() { _minute = v; _notify(); }),
-        )),
+        Expanded(
+          child: _WheelPickerColumn(
+            items: hours,
+            label: '时',
+            controller: _hourController,
+            onChanged: _onHourChanged,
+          ),
+        ),
+        Expanded(
+          child: _WheelPickerColumn(
+            items: minutes,
+            label: '分',
+            controller: _minuteController,
+            onChanged: _onMinuteChanged,
+          ),
+        ),
       ],
     );
   }
 }
 
-// ==================== 滚轮选择器组件 ====================
+// ==================== 滚轮列组件 ====================
 
-class _WheelPicker extends StatelessWidget {
+class _WheelPickerColumn extends StatelessWidget {
   final List<int> items;
-  final int selected;
   final String label;
-  final ValueChanged<int> onChanged;
+  final FixedExtentScrollController controller;
+  final void Function(int index) onChanged;
 
-  const _WheelPicker({
+  const _WheelPickerColumn({
     required this.items,
-    required this.selected,
     required this.label,
+    required this.controller,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final selectedIndex = items.indexOf(selected);
     return Column(
       children: [
-        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14)),
+        Text(
+          label,
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14),
+        ),
         Expanded(
           child: ListWheelScrollView.useDelegate(
             itemExtent: 40,
             physics: const FixedExtentScrollPhysics(),
             onSelectedItemChanged: onChanged,
-            controller: FixedExtentScrollController(
-              initialItem: selectedIndex >= 0 ? selectedIndex : 0,
-            ),
+            controller: controller,
             childDelegate: ListWheelChildBuilderDelegate(
               childCount: items.length,
-              builder: (ctx, i) => Center(
-                child: Text(
-                  items[i].toString(),
-                  style: TextStyle(
-                    color: i == selectedIndex ? Colors.amber : Colors.white.withValues(alpha: 0.7),
-                    fontSize: 20,
-                    fontWeight: i == selectedIndex ? FontWeight.bold : FontWeight.normal,
+              builder: (ctx, i) {
+                final isSelected = controller.selectedItem == i;
+                return Center(
+                  child: Text(
+                    items[i].toString().padLeft(2, '0'),
+                    style: TextStyle(
+                      color: isSelected ? Colors.amber : Colors.white.withValues(alpha: 0.6),
+                      fontSize: isSelected ? 22 : 18,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ),
