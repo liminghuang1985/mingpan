@@ -131,22 +131,42 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),
-                // 日期和时间左右并排
+                // 日期和时间左右并排（去掉玻璃框，只留文字悬浮）
                 Row(
                   children: [
-                    Expanded(child: _GlassTile(
-                      onTap: () => _showDatePicker(ref, birthDate),
-                      icon: Icons.calendar_today,
-                      label: '出生日期',
-                      value: DateFormat('yyyy年MM月dd日').format(birthDate),
-                    )),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _showDatePicker(ref, birthDate),
+                        child: Text(
+                          '${DateFormat('yyyy年MM月dd日').format(birthDate)}  ▼',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            shadows: [
+                              Shadow(color: Colors.black54, blurRadius: 4),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Expanded(child: _GlassTile(
-                      onTap: () => _showTimePicker(ref),
-                      icon: Icons.access_time,
-                      label: '出生时间',
-                      value: '${birthHour.toString().padLeft(2, '0')}:${birthMinute.toString().padLeft(2, '0')}',
-                    )),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _showTimePicker(ref),
+                        child: Text(
+                          '${birthHour.toString().padLeft(2, '0')}:${birthMinute.toString().padLeft(2, '0')}  ▼',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            shadows: [
+                              Shadow(color: Colors.black54, blurRadius: 4),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
