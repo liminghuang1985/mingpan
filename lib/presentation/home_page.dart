@@ -131,6 +131,33 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Spacer(),
+                // 日期和时间标签行
+                Row(
+                  children: const [
+                    Expanded(
+                      child: Text(
+                        '出生日期',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        '出生时间',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
                 // 日期和时间左右并排（去掉玻璃框，只留文字悬浮）
                 Row(
                   children: [
