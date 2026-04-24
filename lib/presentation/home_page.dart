@@ -137,6 +137,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                     Expanded(
                       child: Text(
                         '出生日期',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -148,6 +149,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                     Expanded(
                       child: Text(
                         '出生时间',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -165,6 +167,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                       child: GestureDetector(
                         onTap: () => _showDatePicker(ref, birthDate),
                         child: Text(
+                          textAlign: TextAlign.center,
                           '${DateFormat('yyyy年MM月dd日').format(birthDate)}  ▼',
                           style: const TextStyle(
                             color: Colors.white,
@@ -182,6 +185,7 @@ class _HomeTabState extends ConsumerState<_HomeTab> {
                       child: GestureDetector(
                         onTap: () => _showTimePicker(ref),
                         child: Text(
+                          textAlign: TextAlign.center,
                           '${birthHour.toString().padLeft(2, '0')}:${birthMinute.toString().padLeft(2, '0')}  ▼',
                           style: const TextStyle(
                             color: Colors.white,
